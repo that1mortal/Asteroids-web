@@ -24,12 +24,12 @@ HEAL_MAX = 35
 
 FPS = 60
 
-HIT_SOUND = pygame.mixer.Sound(os.path.join('Assets', 'hit.wav'))
-WALL_SOUND = pygame.mixer.Sound(os.path.join('Assets', 'wall.wav'))
-DEATH_SOUND = pygame.mixer.Sound(os.path.join('Assets', 'death.wav'))
-HEALTH_SOUND = pygame.mixer.Sound(os.path.join('Assets', 'health.wav'))
+HIT_SOUND = pygame.mixer.Sound(os.path.join('sfx', 'hit.wav'))
+WALL_SOUND = pygame.mixer.Sound(os.path.join('sfx', 'wall.wav'))
+DEATH_SOUND = pygame.mixer.Sound(os.path.join('sfx', 'death.wav'))
+HEALTH_SOUND = pygame.mixer.Sound(os.path.join('sfx', 'health.wav'))
 HEALTH_SOUND.set_volume(0.5)
-BOUNCER_SOUND = pygame.mixer.Sound(os.path.join('Assets', 'bouncer.wav'))
+BOUNCER_SOUND = pygame.mixer.Sound(os.path.join('sfx', 'bouncer.wav'))
 
 LOSE_FONT = pygame.font.SysFont('framd', 100)
 SUB_TEXT = pygame.font.SysFont('framd', 20)
@@ -71,7 +71,7 @@ PLAYER_WIDTH = 20
 PLAYER_HEIGHT = 20
 PLAYER_VEL = 8
 
-health_img = pygame.transform.scale(pygame.image.load(os.path.join('Assets', 'health.png')), (25, 25))
+health_img = pygame.transform.scale(pygame.image.load(os.path.join('pictures', 'health.png')), (25, 25))
 
 shake_screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 screen = shake_screen.copy()
