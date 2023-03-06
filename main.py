@@ -314,7 +314,7 @@ def bouncer_movement(player):
         if bouncers_vel[index][1] > 7:
             bouncers_vel[index][1] = 7
         if bouncer.colliderect(player):
-            if hit_on_bounce < bounces_survived + len(bouncers):
+            if hit_on_bounce < bounces_survived - len(bouncers):
                 health -= random.randint(BOUNCER_MIN_DMG, BOUNCER_MAX_DMG)
                 HIT_SOUND.play()
                 for i in range(30):
