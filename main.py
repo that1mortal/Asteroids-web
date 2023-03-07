@@ -277,33 +277,32 @@ def lose_screen():
     run = False
 
 def bouncer_movement(player):
-    global bouncers, BOUNCER_VEL_X, BOUNCER_VEL_Y, bounces_survived, bouncers_vel, health, can_dmg, hit_on_bounce, offset, BOUNCER_MIN_DMG, BOUNCER_MAX_DMG
+    global bouncers, BOUNCER_VEL_X, BOUNCER_VEL_Y, bounces_survived, bouncers_vel, health, can_dmg, hit_on_bounce, offset, BOUNCER_MIN_DMG, BOUNCER_MAX_DMG, bouncer_trails
 
     index = 0
     for bouncer in bouncers:
         bouncer.x += bouncers_vel[index][0]
         bouncer.y += bouncers_vel[index][1]
-        if bouncer.x >= SCREEN_WIDTH:
+        if bouncer.x >= SCREEN_WIDTH and not bouncer_trails[index][0] == bouncer.x:
             bouncers_vel[index][0] *= -1
             bouncers_vel[index][0] += random.randint(-4, 0)
             bouncers_vel[index][1] += random.randint(-4, 0)
             for i in range(3):
                 particles.append(particle(bouncer.x, bouncer.y, random.randrange(-5, 5), random.randrange(-2, 0), 3, 3, BLUE, 1))
-            bounces_survived += 1
-        elif bouncer.x <= 0:
+        elif bouncer.x <= 0 and not bouncer_trails[index][0] == bouncer.x:
             bouncers_vel[index][0] *= -1
             bouncers_vel[index][0] += random.randint(0, 4)
             bouncers_vel[index][1] += random.randint(-4, 0)
             for i in range(3):
                 particles.append(particle(bouncer.x, bouncer.y, random.randrange(-5, 5), random.randrange(-2, 0), 3, 3, BLUE, 1))
             bounces_survived += 1
-        if bouncer.y >= SCREEN_HEIGHT:
+        if bouncer.y >= SCREEN_HEIGHT and not bouncer_trails[index][1] == bouncer.y:
             bouncers_vel[index][1] *= -1
             bouncers_vel[index][1] += random.randint(-4, 0)
             for i in range(3):
                 particles.append(particle(bouncer.x, bouncer.y, random.randrange(-5, 5), random.randrange(-2, 0), 3, 3, BLUE, 1))
             bounces_survived += 1
-        elif bouncer.y <= 0:
+        elif bouncer.y <= 0 and not bouncer_trails[index][1] == bouncer.y:
             bouncers_vel[index][1]*= -1
             bouncers_vel[index][1] += random.randint(0, 4)
             for i in range(3):
