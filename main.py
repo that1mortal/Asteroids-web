@@ -2,6 +2,14 @@ import pygame
 import os
 import random
 from itertools import repeat
+import firebase_admin
+from firebase_admin import firestore
+from firebase_admin import credentials
+
+
+cred = credentials.Certificate('dodge-lines-eb5dc0de48f3.json')
+app = firebase_admin.initialize_app(cred)
+db = firestore.client()
 
 pygame.init()
 pygame.font.init()
@@ -38,6 +46,8 @@ SCORE_TEXT = pygame.font.SysFont('famd', 30)
 
 first = True
 
+user = ''
+
 trail = []
 mini_trail = []
 bouncer_trails = []
@@ -72,11 +82,12 @@ PLAYER_WIDTH = 20
 PLAYER_HEIGHT = 20
 PLAYER_VEL = 8
 
-health_img = pygame.transform.scale(pygame.image.load(os.path.join('pictures', 'health.png')), (25, 25))
+HEALTH_PACK_SIZE = 25
+health_img = pygame.transform.scale(pygame.image.load(os.path.join('pictures', 'health.png')), (HEALTH_PACK_SIZE, HEALTH_PACK_SIZE))
 
 shake_screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 screen = shake_screen.copy()
-pygame.display.set_caption("Dodge Lines")
+pygame.display.set_caption("Asteriods")
 
 bounce_multiplier = 3
 
@@ -108,7 +119,7 @@ class particle():
 particles = []
 
 def draw_window(player, mini_square):
-    global trail, mini_trail, health, bouncer_trails, bouncers, offset, health_packs, particles
+    global trail, mini_trail, health, bouncer_trails, bouncers, offset, health_packs, particles, health_img
 
     screen.fill(BLACK)
 
@@ -175,7 +186,7 @@ def screen_shake(intensity, amplitude):
 def player_movement(player, keys_pressed):
     global PLAYER_VEL, trail, offset, health
 
-    if keys_pressed[pygame.K_w]:
+    if keys_pressed[pygame.K_w] or keys_pressed[pygame.K_UP]:
         if player.y - PLAYER_VEL > 0:
             player.y -= PLAYER_VEL
         else:
@@ -185,7 +196,7 @@ def player_movement(player, keys_pressed):
                 for i in range(15):
                     particles.append(particle(player.x, player.y, random.randrange(-5, 5), random.randrange(-2, 0), 5, 5, RED, 1))
                 offset = screen_shake(3, 10)
-    if keys_pressed[pygame.K_s]:
+    if keys_pressed[pygame.K_s] or keys_pressed[pygame.K_DOWN]:
         if player.y + PLAYER_VEL + PLAYER_HEIGHT < SCREEN_HEIGHT:
             player.y += PLAYER_VEL
         else:
@@ -195,7 +206,7 @@ def player_movement(player, keys_pressed):
                 for i in range(15):
                     particles.append(particle(player.x, player.y, random.randrange(-5, 5), random.randrange(-2, 0), 5, 5, RED, 1))
                 offset = screen_shake(3, 10)
-    if keys_pressed[pygame.K_a]:
+    if keys_pressed[pygame.K_a] or keys_pressed[pygame.K_LEFT]:
         if player.x - PLAYER_VEL > 0:
             player.x -= PLAYER_VEL
         else:
@@ -205,7 +216,7 @@ def player_movement(player, keys_pressed):
                 for i in range(15):
                     particles.append(particle(player.x, player.y, random.randrange(-5, 5), random.randrange(-2, 0), 5, 5, RED, 1))
                 offset = screen_shake(3, 10)
-    if keys_pressed[pygame.K_d]:
+    if keys_pressed[pygame.K_d] or keys_pressed[pygame.K_RIGHT]:
         if player.x + PLAYER_VEL + PLAYER_WIDTH < SCREEN_WIDTH:
             player.x += PLAYER_VEL
         else:
@@ -255,27 +266,59 @@ def mini_square_movement(player, mini_square):
                 particles.append(particle(mini_square.x, mini_square.y, random.randrange(-5, 5), random.randrange(-2, 0), 5, 5, ORANGE, 0))
 
 def lose_screen():
-    global run, bounces_survived, bounce_multiplier
+    global run, bounces_survived, bounce_multiplier, user
 
     lose_text = LOSE_FONT.render("You Died!", 1, RED)
-    sub_text = SUB_TEXT.render("Restarting in 3 seconds", 1, WHITE)
+    sub_text = SUB_TEXT.render("Press Space to play again", 1, WHITE)
     score_text = SCORE_TEXT.render("Score: " + str(bounces_survived), 1, WHITE)
     if bounce_multiplier == 4:
         diff_text = SCORE_TEXT.render("Easy Difficulty", 1, GREEN)
+        if bounces_survived > db.collection(u'highscores').document(u'easy').get().get(u'score'):
+            db.collection(u'highscores').document(u'easy').update({u'score' : bounces_survived})
+            db.collection(u'highscores').document(u'easy').update({u'user' : user})
+        highscore_text = SCORE_TEXT.render("Highscore: " + str(db.collection(u'highscores').document(u'easy').get().get(u'score')) + " - " + db.collection(u'highscores').document(u'easy').get().get(u'user'), 1, WHITE)
     if bounce_multiplier == 3:
         diff_text = SCORE_TEXT.render("Medium Diffuculty", 1, ORANGE)
+        if bounces_survived > db.collection(u'highscores').document(u'medium').get().get(u'score'):
+            db.collection(u'highscores').document(u'medium').update({u'score' : bounces_survived})
+            db.collection(u'highscores').document(u'medium').update({u'user' : user})
+        highscore_text = SCORE_TEXT.render("Highscore: " + str(db.collection(u'highscores').document(u'medium').get().get(u'score')) + " - " + db.collection(u'highscores').document(u'medium').get().get(u'user'), 1, WHITE)
     if bounce_multiplier == 2:
         diff_text = SCORE_TEXT.render("Hard Difficulty", 1, RED)
+        if bounces_survived > db.collection(u'highscores').document(u'hard').get().get(u'score'):
+            db.collection(u'highscores').document(u'hard').update({u'score' : bounces_survived})
+            db.collection(u'highscores').document(u'hard').update({u'user' : user})
+        highscore_text = SCORE_TEXT.render("Highscore: " + str(db.collection(u'highscores').document(u'hard').get().get(u'score')) + " - " + db.collection(u'highscores').document(u'hard').get().get(u'user'), 1, WHITE)
+    if bounce_multiplier == 6:
+        diff_text = SCORE_TEXT.render("R*tard Mode", 1, BLUE)
+        if bounces_survived > db.collection(u'highscores').document(u'r').get().get(u'score'):
+            db.collection(u'highscores').document(u'r').update({u'score' : bounces_survived})
+            db.collection(u'highscores').document(u'r').update({u'user' : user})
+        highscore_text = SCORE_TEXT.render("Highscore: " + str(db.collection(u'highscores').document(u'r').get().get(u'score')) + " - " + db.collection(u'highscores').document(u'r').get().get(u'user'), 1, WHITE)
     
-    screen.fill(BLACK)
-    screen.blit(lose_text, (SCREEN_WIDTH/2 - lose_text.get_width()/2, SCREEN_HEIGHT/2 - lose_text.get_height()/2))
-    screen.blit(sub_text, (SCREEN_WIDTH/2 - sub_text.get_width()/2, SCREEN_HEIGHT/2 - sub_text.get_height()/2 + 80))
-    screen.blit(score_text, (SCREEN_WIDTH/2 - score_text.get_width()/2, SCREEN_HEIGHT/2 - score_text.get_height()/2 - 80))
-    screen.blit(diff_text, (SCREEN_WIDTH/2 - diff_text.get_width()/2, 100))
-    shake_screen.blit(screen, (0, 0))
-    pygame.display.update()
-    pygame.time.delay(3000)
-    run = False
+    dead = True
+
+    while dead:
+
+        for event in pygame.event.get():
+
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                quit()
+            
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_SPACE:
+                    dead = False
+
+        screen.fill(BLACK)
+        screen.blit(lose_text, (SCREEN_WIDTH/2 - lose_text.get_width()/2, SCREEN_HEIGHT/2 - lose_text.get_height()/2))
+        screen.blit(sub_text, (SCREEN_WIDTH/2 - sub_text.get_width()/2, SCREEN_HEIGHT/2 - sub_text.get_height()/2 + 80))
+        screen.blit(score_text, (SCREEN_WIDTH/2 - score_text.get_width()/2, SCREEN_HEIGHT/2 - score_text.get_height()/2 - 80))
+        screen.blit(highscore_text, (SCREEN_WIDTH/2 - highscore_text.get_width()/2, SCREEN_HEIGHT/2 - highscore_text.get_height()/2 - 50))
+        screen.blit(diff_text, (SCREEN_WIDTH/2 - diff_text.get_width()/2, 100))
+        shake_screen.blit(screen, (0, 0))
+        pygame.display.update()
+        run = False
 
 def bouncer_movement(player):
     global bouncers, BOUNCER_VEL_X, BOUNCER_VEL_Y, bounces_survived, bouncers_vel, health, can_dmg, hit_on_bounce, offset, BOUNCER_MIN_DMG, BOUNCER_MAX_DMG, bouncer_trails, last_bounces
@@ -328,7 +371,7 @@ def bouncer_movement(player):
         index += 1
 
 def difficulty_handler(keys_pressed):
-    global bounce_multiplier, PLAYER_VEL, MINI_SQUARE_MIN_DMG, MINI_SQUARE_MAX_DMG, BOUNCER_MIN_DMG, BOUNCER_MAX_DMG, MINI_SQUARE_SPEED, HEALTH_PACK_MIN, HEALTH_PACK_CHANCE, HEAL_MIN, HEAL_MAX, diff_change
+    global bounce_multiplier, PLAYER_VEL, MINI_SQUARE_MIN_DMG, MINI_SQUARE_MAX_DMG, BOUNCER_MIN_DMG, BOUNCER_MAX_DMG, MINI_SQUARE_SPEED, HEALTH_PACK_MIN, HEALTH_PACK_CHANCE, HEAL_MIN, HEAL_MAX, diff_change, health_img, HEALTH_PACK_SIZE
     if diff_change == True:
         if keys_pressed[pygame.K_1]:
             bounce_multiplier = 4
@@ -337,8 +380,10 @@ def difficulty_handler(keys_pressed):
             MINI_SQUARE_MAX_DMG = 25
             MINI_SQUARE_SPEED = 1
             HEALTH_PACK_MIN = 90
-            HEAL_MIN = 25
+            health_img = pygame.transform.scale(pygame.image.load(os.path.join('pictures', 'health.png')), (40, 40))
+            HEAL_MIN = 30
             HEAL_MAX = 50
+            HEALTH_PACK_SIZE = 40
             HEALTH_PACK_CHANCE = 2500
             diff_change = False
         if keys_pressed[pygame.K_2]:
@@ -347,10 +392,12 @@ def difficulty_handler(keys_pressed):
             MINI_SQUARE_MIN_DMG = 20
             MINI_SQUARE_MAX_DMG = 30
             MINI_SQUARE_SPEED = 2
-            HEAL_MIN = 15
-            HEAL_MAX = 30
+            HEAL_MIN = 25
+            HEAL_MAX = 45
             HEALTH_PACK_MIN = 75
+            HEALTH_PACK_SIZE = 25
             HEALTH_PACK_CHANCE = 2800
+            health_img = pygame.transform.scale(pygame.image.load(os.path.join('pictures', 'health.png')), (25, 25))
             diff_change = False
         if keys_pressed[pygame.K_3]:
             bounce_multiplier = 2
@@ -360,8 +407,23 @@ def difficulty_handler(keys_pressed):
             HEALTH_PACK_MIN = 45
             HEAL_MIN = 10
             HEAL_MAX = 20
+            HEALTH_PACK_SIZE = 10
+            health_img = pygame.transform.scale(pygame.image.load(os.path.join('pictures', 'health.png')), (10, 10))
             PLAYER_VEL = 5
             HEALTH_PACK_CHANCE = 67500
+            diff_change = False
+        if keys_pressed[pygame.K_0]:
+            bounce_multiplier = 6
+            MINI_SQUARE_MIN_DMG = 3
+            MINI_SQUARE_MAX_DMG = 7
+            MINI_SQUARE_SPEED = 1
+            HEALTH_PACK_MIN = 99
+            HEAL_MIN = 100
+            HEAL_MAX = 100
+            HEALTH_PACK_SIZE = 80
+            PLAYER_VEL = 9
+            HEALTH_PACK_CHANCE = 100
+            health_img = pygame.transform.scale(pygame.image.load(os.path.join('pictures', 'health.png')), (80, 80))
             diff_change = False
 
 def health_handler(player):
@@ -382,7 +444,9 @@ def health_handler(player):
 
 def main():
 
-    global trail, bounces_survived, mini_trail, health, run, bouncer_trails, bouncers, bouncers_vel, hit_on_bounce, easy_button, med_button, hard_button, health_packs, diff_change, first, particles, last_bounces
+    global trail, bounces_survived, mini_trail, health, run, bouncer_trails, bouncers, bouncers_vel, hit_on_bounce, easy_button, med_button, hard_button, health_packs, diff_change, first, particles, last_bounces, health_img, HEALTH_PACK_SIZE, user, offset
+
+    pause = False
 
     health = 100
 
@@ -393,14 +457,26 @@ def main():
     health_packs = []
 
     if first == True:
-        diff_text = HEALTH_TEXT.render("1: Easy 2: Medium 3: Hard", 1,  WHITE)
-        sub_text = SUB_TEXT.render("You can select the difficulty when the game starts", 1, WHITE)
-        shake_screen.fill(BLACK)
-        shake_screen.blit(diff_text, (SCREEN_WIDTH/2 - diff_text.get_width()/2, SCREEN_HEIGHT/2 - diff_text.get_height()/2))
-        shake_screen.blit(sub_text, (SCREEN_WIDTH/2 - sub_text.get_width()/2, SCREEN_HEIGHT/2 - sub_text.get_height()/2 + 50))
-        pygame.display.update()
-        pygame.time.delay(3500)
-        first = False
+        while first:
+            diff_text = HEALTH_TEXT.render("1: Easy 2: Medium 3: Hard", 1,  WHITE)
+            sub_text = SUB_TEXT.render("You can select the difficulty when the game starts", 1, WHITE)
+            pause_and_user_text = SUB_TEXT.render("Pause by pressing Esc, and you can type your username in the pause menu!", 1, WHITE)
+            continue_text = SUB_TEXT.render("Press Space to continue", 1, WHITE)
+            shake_screen.fill(BLACK)
+            shake_screen.blit(diff_text, (SCREEN_WIDTH/2 - diff_text.get_width()/2, SCREEN_HEIGHT/2 - diff_text.get_height()/2))
+            shake_screen.blit(sub_text, (SCREEN_WIDTH/2 - sub_text.get_width()/2, SCREEN_HEIGHT/2 - sub_text.get_height()/2 + 50))
+            shake_screen.blit(pause_and_user_text, (SCREEN_WIDTH/2 - pause_and_user_text.get_width()/2, SCREEN_HEIGHT/2 - pause_and_user_text.get_height()/2 + 80))
+            shake_screen.blit(continue_text, (SCREEN_WIDTH/2 - continue_text.get_width()/2, SCREEN_HEIGHT/2 - continue_text.get_height()/2 + 110))
+            pygame.display.update()
+            for event in pygame.event.get():
+
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    quit()
+
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_SPACE:
+                        first = False
 
     trail = []
     mini_trail = []
@@ -438,8 +514,48 @@ def main():
 
             if event.type == pygame.QUIT:
                 pygame.quit()
-                exit()
-        
+                quit()
+            
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    pause = True
+
+            while pause:
+                for event in pygame.event.get():
+
+                    if event.type == pygame.QUIT:
+                        pygame.quit()
+                        quit()
+
+                    if event.type == pygame.KEYDOWN:
+                        if event.key == pygame.K_ESCAPE:
+                            pause = False
+                            draw_window(player, mini_square)
+                            pygame.time.delay(2000)
+                        elif event.key == pygame.K_BACKSPACE:
+                            user = user[:-1]
+                        elif event.key == pygame.K_TAB:
+                            health = 0
+                            pause = False
+                        else:
+                            user += event.unicode
+                        
+                            
+                text = SCORE_TEXT.render(user, True, WHITE)
+                screen.fill(BLACK)
+                pause_text = HEALTH_TEXT.render("Paused", 1, WHITE)
+                sub_text = SCORE_TEXT.render("Press Esc to resume", 1, WHITE)
+                set_name_text = SCORE_TEXT.render("You can also type your username for the highscore (If you get it!)", 1, WHITE)
+                restart_text = SCORE_TEXT.render("Press Tab to restart", 1, WHITE)
+                screen.blit(pause_text, (SCREEN_WIDTH/2 - pause_text.get_width()/2, SCREEN_HEIGHT/2 - pause_text.get_height()/2))
+                screen.blit(sub_text, (SCREEN_WIDTH/2 - sub_text.get_width()/2, SCREEN_HEIGHT/2 - sub_text.get_height()/2 + 40))
+                screen.blit(set_name_text, (SCREEN_WIDTH/2 - set_name_text.get_width()/2, SCREEN_HEIGHT/2 - set_name_text.get_height()/2 - 80))
+                screen.blit(text, (SCREEN_WIDTH/2 - text.get_width()/2, SCREEN_HEIGHT/2 - text.get_height()/2 - 40))
+                screen.blit(restart_text, (SCREEN_WIDTH/2 - restart_text.get_width()/2, SCREEN_HEIGHT/2 - restart_text.get_height()/2 - 120))
+                shake_screen.blit(screen, next(offset))
+                pygame.display.update()
+
+                    
         trail.insert(0, [player.x, player.y])
         if len(trail) > TRAIL_LENGTH:
             trail.pop(TRAIL_LENGTH)
@@ -478,8 +594,8 @@ def main():
                 particles.append(particle(randx,randy, random.randrange(-5, 5), random.randrange(-2, 0), 5, 5, BLUE, 0))
 
         if health < HEALTH_PACK_MIN:
-            if random.randint(1, HEALTH_PACK_CHANCE) == 300:
-                health_packs.append(pygame.Rect(random.randint(15, SCREEN_WIDTH - 15), random.randint(15, SCREEN_HEIGHT - 15), 15, 15))
+            if random.randint(1, HEALTH_PACK_CHANCE) == 1:
+                health_packs.append(pygame.Rect(random.randint(HEALTH_PACK_SIZE, SCREEN_WIDTH - HEALTH_PACK_SIZE), random.randint(15, SCREEN_HEIGHT - 15), HEALTH_PACK_SIZE, HEALTH_PACK_SIZE))
 
         keys_pressed = pygame.key.get_pressed()
         player_movement(player, keys_pressed)
