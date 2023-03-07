@@ -43,6 +43,7 @@ mini_trail = []
 bouncer_trails = []
 bouncers_vel = []
 health_packs = []
+last_bounces = [[]]
 
 hit_on_bounce = 0
 
@@ -277,34 +278,39 @@ def lose_screen():
     run = False
 
 def bouncer_movement(player):
-    global bouncers, BOUNCER_VEL_X, BOUNCER_VEL_Y, bounces_survived, bouncers_vel, health, can_dmg, hit_on_bounce, offset, BOUNCER_MIN_DMG, BOUNCER_MAX_DMG, bouncer_trails
+    global bouncers, BOUNCER_VEL_X, BOUNCER_VEL_Y, bounces_survived, bouncers_vel, health, can_dmg, hit_on_bounce, offset, BOUNCER_MIN_DMG, BOUNCER_MAX_DMG, bouncer_trails, last_bounces
 
     index = 0
     for bouncer in bouncers:
         bouncer.x += bouncers_vel[index][0]
         bouncer.y += bouncers_vel[index][1]
-        if bouncer.x >= SCREEN_WIDTH and not bouncer_trails[index][0] == bouncer.x:
+        if bouncer.x >= SCREEN_WIDTH and not last_bounces[index] == "right":
             bouncers_vel[index][0] *= -1
             bouncers_vel[index][0] += random.randint(-4, 0)
             bouncers_vel[index][1] += random.randint(-4, 0)
+            last_bounces[index] = "right"
             for i in range(3):
                 particles.append(particle(bouncer.x, bouncer.y, random.randrange(-5, 5), random.randrange(-2, 0), 3, 3, BLUE, 1))
-        elif bouncer.x <= 0 and not bouncer_trails[index][0] == bouncer.x:
+            bounces_survived += 1
+        elif bouncer.x <= 0 and not last_bounces[index] == "left":
             bouncers_vel[index][0] *= -1
             bouncers_vel[index][0] += random.randint(0, 4)
             bouncers_vel[index][1] += random.randint(-4, 0)
+            last_bounces[index] = "left"
             for i in range(3):
                 particles.append(particle(bouncer.x, bouncer.y, random.randrange(-5, 5), random.randrange(-2, 0), 3, 3, BLUE, 1))
             bounces_survived += 1
-        if bouncer.y >= SCREEN_HEIGHT and not bouncer_trails[index][1] == bouncer.y:
+        if bouncer.y >= SCREEN_HEIGHT and not last_bounces[index] == "down":
             bouncers_vel[index][1] *= -1
             bouncers_vel[index][1] += random.randint(-4, 0)
+            last_bounces[index] = "down"
             for i in range(3):
                 particles.append(particle(bouncer.x, bouncer.y, random.randrange(-5, 5), random.randrange(-2, 0), 3, 3, BLUE, 1))
             bounces_survived += 1
-        elif bouncer.y <= 0 and not bouncer_trails[index][1] == bouncer.y:
+        elif bouncer.y <= 0 and not last_bounces[index] == "up":
             bouncers_vel[index][1]*= -1
             bouncers_vel[index][1] += random.randint(0, 4)
+            last_bounces[index] = "up"
             for i in range(3):
                 particles.append(particle(bouncer.x, bouncer.y, random.randrange(-5, 5), random.randrange(-2, 0), 3, 3, BLUE, 1))
             bounces_survived += 1
@@ -377,11 +383,13 @@ def health_handler(player):
 
 def main():
 
-    global trail, bounces_survived, mini_trail, health, run, bouncer_trails, bouncers, bouncers_vel, hit_on_bounce, easy_button, med_button, hard_button, health_packs, diff_change, first, particles
+    global trail, bounces_survived, mini_trail, health, run, bouncer_trails, bouncers, bouncers_vel, hit_on_bounce, easy_button, med_button, hard_button, health_packs, diff_change, first, particles, last_bounces
 
     health = 100
 
     run = True
+
+    last_bounces = [""]
 
     health_packs = []
 
@@ -463,6 +471,7 @@ def main():
             randy = random.randint(0, SCREEN_HEIGHT)
             bouncers.append(pygame.Rect(randx - BOUNCER_WIDTH/2, randy - BOUNCER_WIDTH/2, BOUNCER_WIDTH, BOUNCER_HEIGHT))
             bouncers_vel.append([BOUNCER_VEL_X, BOUNCER_VEL_Y])
+            last_bounces.append("")
             bouncer_trails.append([[randx, randy]])
             bounce_limit *= bounce_multiplier
             BOUNCER_SOUND.play()
