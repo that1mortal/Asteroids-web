@@ -327,31 +327,36 @@ def bouncer_movement(player):
     for bouncer in bouncers:
         bouncer.x += bouncers_vel[index][0]
         bouncer.y += bouncers_vel[index][1]
-        if bouncer.x >= SCREEN_WIDTH and not last_bounces[index] == 'right':
+        if bouncer.x >= SCREEN_WIDTH - 7 and not last_bounces[index] == 'right':
             bouncers_vel[index][0] *= -1
             bouncers_vel[index][0] += random.randint(-4, 0)
             bouncers_vel[index][1] += random.randint(-4, 0)
+            bouncers_vel[index][1] *= 1 + random.randint(-2, 2)
             last_bounces[index] = "right"
             for i in range(3):
                 particles.append(particle(bouncer.x, bouncer.y, random.randrange(-5, 5), random.randrange(-2, 0), 3, 3, BLUE, 1))
             bounces_survived += 1
-        elif bouncer.x <= 0 and not last_bounces[index] == 'left':
+        elif bouncer.x <= 7 and not last_bounces[index] == 'left':
             bouncers_vel[index][0] *= -1
             bouncers_vel[index][0] += random.randint(0, 4)
             bouncers_vel[index][1] += random.randint(-4, 0)
+            bouncers_vel[index][1] *= 1 + random.randint(-2, 2)
             last_bounces[index] = "left"
             for i in range(3):
                 particles.append(particle(bouncer.x, bouncer.y, random.randrange(-5, 5), random.randrange(-2, 0), 3, 3, BLUE, 1))
             bounces_survived += 1
-        if bouncer.y >= SCREEN_HEIGHT and not last_bounces[index] == 'down':
+        if bouncer.y >= SCREEN_HEIGHT + 7 and not last_bounces[index] == 'down':
             bouncers_vel[index][1] *= -1
             bouncers_vel[index][1] += random.randint(-4, 0)
+            bouncers_vel[index][0] *= 3 + random.randint(-2, 2)
+            last_bounces[index] = "down"
             for i in range(3):
                 particles.append(particle(bouncer.x, bouncer.y, random.randrange(-5, 5), random.randrange(-2, 0), 3, 3, BLUE, 1))
             bounces_survived += 1
-        elif bouncer.y <= 0 and not last_bounces[index] == 'up':
+        elif bouncer.y <= 7 and not last_bounces[index] == 'up':
             bouncers_vel[index][1]*= -1
             bouncers_vel[index][1] += random.randint(0, 4)
+            bouncers_vel[index][0] *= 3 + random.randint(-2, 2)
             last_bounces[index] = "up"
             for i in range(3):
                 particles.append(particle(bouncer.x, bouncer.y, random.randrange(-5, 5), random.randrange(-2, 0), 3, 3, BLUE, 1))
