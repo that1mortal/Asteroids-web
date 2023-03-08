@@ -22,9 +22,6 @@ ORANGE = (170, 115, 55)
 GREEN = (0, 255, 0)
 BLUE = (0, 0, 255)
 
-SCREEN_WIDTH = 800
-SCREEN_HEIGHT = 500
-
 HEALTH_PACK_MIN = 75
 HEALTH_PACK_CHANCE = 1200
 HEAL_MIN = 15
@@ -85,6 +82,9 @@ PLAYER_VEL = 8
 HEALTH_PACK_SIZE = 25
 health_img = pygame.transform.scale(pygame.image.load(os.path.join('pictures', 'health.png')), (HEALTH_PACK_SIZE, HEALTH_PACK_SIZE))
 
+
+SCREEN_WIDTH = 800
+SCREEN_HEIGHT = 500
 shake_screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 screen = shake_screen.copy()
 pygame.display.set_caption("Asteriods")
@@ -458,25 +458,36 @@ def main():
 
     if first == True:
         while first:
+            for event in pygame.event.get():
+
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    quit()
+                
+
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_SPACE:
+                        first = False
+                    elif event.key == pygame.K_BACKSPACE:
+                            user = user[:-1]
+                    else:
+                        user += event.unicode
+            
+            text = SCORE_TEXT.render(user, 1, WHITE)            
             diff_text = HEALTH_TEXT.render("1: Easy 2: Medium 3: Hard", 1,  WHITE)
             sub_text = SUB_TEXT.render("You can select the difficulty when the game starts", 1, WHITE)
             pause_and_user_text = SUB_TEXT.render("Pause by pressing Esc, and you can type your username in the pause menu!", 1, WHITE)
+            set_name_text = SCORE_TEXT.render("Type username here (start typing WITHOUT SPACES)", 1, WHITE)
             continue_text = SUB_TEXT.render("Press Space to continue", 1, WHITE)
             shake_screen.fill(BLACK)
             shake_screen.blit(diff_text, (SCREEN_WIDTH/2 - diff_text.get_width()/2, SCREEN_HEIGHT/2 - diff_text.get_height()/2))
             shake_screen.blit(sub_text, (SCREEN_WIDTH/2 - sub_text.get_width()/2, SCREEN_HEIGHT/2 - sub_text.get_height()/2 + 50))
             shake_screen.blit(pause_and_user_text, (SCREEN_WIDTH/2 - pause_and_user_text.get_width()/2, SCREEN_HEIGHT/2 - pause_and_user_text.get_height()/2 + 80))
             shake_screen.blit(continue_text, (SCREEN_WIDTH/2 - continue_text.get_width()/2, SCREEN_HEIGHT/2 - continue_text.get_height()/2 + 110))
+            shake_screen.blit(set_name_text, (SCREEN_WIDTH/2 - set_name_text.get_width()/2, SCREEN_HEIGHT/2 - set_name_text.get_height()/2 - 80))
+            shake_screen.blit(text, (SCREEN_WIDTH/2 - text.get_width()/2, SCREEN_HEIGHT/2 - text.get_height()/2 - 40))
             pygame.display.update()
-            for event in pygame.event.get():
-
-                if event.type == pygame.QUIT:
-                    pygame.quit()
-                    quit()
-
-                if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_SPACE:
-                        first = False
+                
 
     trail = []
     mini_trail = []
@@ -541,7 +552,7 @@ def main():
                             user += event.unicode
                         
                             
-                text = SCORE_TEXT.render(user, True, WHITE)
+                text = SCORE_TEXT.render(user, 1, WHITE)
                 screen.fill(BLACK)
                 pause_text = HEALTH_TEXT.render("Paused", 1, WHITE)
                 sub_text = SCORE_TEXT.render("Press Esc to resume", 1, WHITE)
