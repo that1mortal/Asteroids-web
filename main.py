@@ -5,6 +5,7 @@ from itertools import repeat
 import firebase_admin
 from firebase_admin import firestore
 from firebase_admin import credentials
+import asyncio
 
 cred = credentials.Certificate('dodge-lines-eb5dc0de48f3.json')
 app = firebase_admin.initialize_app(cred)
@@ -291,7 +292,7 @@ def mini_square_movement(player, mini_square):
                          0))
 
 
-def lose_screen():
+async def lose_screen():
     global run, bounces_survived, bounce_multiplier, user
 
     lose_text = LOSE_FONT.render("You Died!", 1, RED)
@@ -344,6 +345,8 @@ def lose_screen():
                 if event.key == pygame.K_SPACE:
                     dead = False
 
+        await asyncio.sleep(0)
+
         screen.fill(BLACK)
         screen.blit(lose_text,
                     (SCREEN_WIDTH / 2 - lose_text.get_width() / 2, SCREEN_HEIGHT / 2 - lose_text.get_height() / 2))
@@ -370,7 +373,8 @@ def bouncer_movement(player):
         if bouncer.x >= SCREEN_WIDTH and not last_bounces[index] == 'right':
             bouncers_vel[index][0] *= -1
             bouncers_vel[index][0] += random.randint(-4, 0)
-            bouncers_vel[index][1] += random.randint(-4, 0)
+            bouncers_vel[index][1] += random.choice([-1, 1])
+            bouncers_vel[index][1] += (1 + random.randint(-5, 4))
             last_bounces[index] = "right"
             for i in range(3):
                 particles.append(
@@ -379,7 +383,8 @@ def bouncer_movement(player):
         elif bouncer.x <= 0 and not last_bounces[index] == 'left':
             bouncers_vel[index][0] *= -1
             bouncers_vel[index][0] += random.randint(0, 4)
-            bouncers_vel[index][1] += random.randint(-4, 0)
+            bouncers_vel[index][1] += random.choice([-1, 1])
+            bouncers_vel[index][1] *= (1 + random.randint(-5, 4))
             last_bounces[index] = "left"
             for i in range(3):
                 particles.append(
@@ -388,6 +393,9 @@ def bouncer_movement(player):
         if bouncer.y >= SCREEN_HEIGHT and not last_bounces[index] == 'down':
             bouncers_vel[index][1] *= -1
             bouncers_vel[index][1] += random.randint(-4, 0)
+            bouncers_vel[index][0] += random.choice([-1, 1])
+            bouncers_vel[index][0] *= (1 + random.randint(-5, 4))
+            last_bounces[index] = "down"
             for i in range(3):
                 particles.append(
                     particle(bouncer.x, bouncer.y, random.randrange(-5, 5), random.randrange(-2, 0), 3, 3, BLUE, 1))
@@ -395,15 +403,22 @@ def bouncer_movement(player):
         elif bouncer.y <= 0 and not last_bounces[index] == 'up':
             bouncers_vel[index][1] *= -1
             bouncers_vel[index][1] += random.randint(0, 4)
+            bouncers_vel[index][0] += random.choice([-1, 1])
+            bouncers_vel[index][0] *= (1 + random.randint(-5, 4))
+            print(bouncers_vel[index][0], bouncers_vel[index][1])
             last_bounces[index] = "up"
             for i in range(3):
                 particles.append(
                     particle(bouncer.x, bouncer.y, random.randrange(-5, 5), random.randrange(-2, 0), 3, 3, BLUE, 1))
             bounces_survived += 1
-        if bouncers_vel[index][0] > 7:
-            bouncers_vel[index][0] = 7
-        if bouncers_vel[index][1] > 7:
-            bouncers_vel[index][1] = 7
+        if bouncers_vel[index][0] > 8:
+            bouncers_vel[index][0] = 8
+        if bouncers_vel[index][1] > 8:
+            bouncers_vel[index][1] = 8
+        if bouncers_vel[index][0] < -8:
+            bouncers_vel[index][0] = -8
+        if bouncers_vel[index][1] < -8:
+            bouncers_vel[index][1] = -8
         if bouncer.colliderect(player):
             if hit_on_bounce < bounces_survived - len(bouncers):
                 health -= random.randint(BOUNCER_MIN_DMG, BOUNCER_MAX_DMG)
@@ -491,7 +506,7 @@ def health_handler(player):
         index += 1
 
 
-def main():
+async def main():
     global trail, bounces_survived, mini_trail, health, run, bouncer_trails, bouncers, bouncers_vel, hit_on_bounce, easy_button, med_button, hard_button, health_packs, diff_change, first, particles, last_bounces, health_img, HEALTH_PACK_SIZE, user, offset
 
     pause = False
@@ -607,6 +622,8 @@ def main():
                             pause = False
                         else:
                             user += event.unicode
+                
+                await asyncio.sleep(0)
 
                 text = SCORE_TEXT.render(user, 1, WHITE)
                 screen.fill(BLACK)
@@ -648,7 +665,7 @@ def main():
             draw_window(player, mini_square)
             DEATH_SOUND.play()
             pygame.time.delay(1000)
-            lose_screen()
+            await lose_screen()
 
         if bounces_survived > 5:
             diff_change = False
@@ -673,6 +690,8 @@ def main():
                                                 random.randint(15, SCREEN_HEIGHT - 15), HEALTH_PACK_SIZE,
                                                 HEALTH_PACK_SIZE))
 
+        await asyncio.sleep(0)
+
         keys_pressed = pygame.key.get_pressed()
         player_movement(player, keys_pressed)
         difficulty_handler(keys_pressed)
@@ -681,8 +700,7 @@ def main():
         health_handler(player)
         draw_window(player, mini_square)
 
-    main()
+    await main()
 
 
-if __name__ == "__main__":
-    main()
+asyncio.run(main())
