@@ -1,8 +1,5 @@
 # Asteroids
 
-# History
-Yes, this used to be called Dodge Lines
-
 # Backstory/Why I made this
 This project was a concept i always wanted to make since i got into programing on scratch
 This was made in python with pygame
