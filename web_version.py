@@ -418,29 +418,33 @@ def bouncer_movement(player):
 
     index = 0
     for bouncer in bouncers:
-        bouncer.x += bouncers_vel[index][0]
-        bouncer.y += bouncers_vel[index][1]
-        if bouncer.x + bouncer.width >= SCREEN_WIDTH and not last_bounces[index] == 'right':
+        if bouncer.x + bouncer.width + bouncers_vel[index][0] >= SCREEN_WIDTH and not last_bounces[index] == 'right':
             bouncers_vel[index][0] *= -1
             bouncers_vel[index][0] += random.randint(-4, 0)
-            bouncers_vel[index][1] += random.choice([-1, 1])
-            bouncers_vel[index][1] += (1 + random.randint(-5, 4))
+            if bouncer.y + bouncers_vel[index][1] >= SCREEN_HEIGHT + bouncers_vel[index][1] - 5 or bouncer.y + bouncers_vel[index][1] <= 0 + bouncers_vel[index][1] + 5:
+                bouncers_vel[index][1] *= -1
+            else:
+                bouncers_vel[index][1] += random.choice([-1, 1])
+                bouncers_vel[index][1] += (1 + random.randint(-5, 4))
             last_bounces[index] = "right"
             for i in range(3):
                 particles.append(
                     particle(bouncer.x, bouncer.y, random.randrange(-5, 5), random.randrange(-2, 0), 5, 5, BLUE, 1))
             bounces_survived += 1
-        elif bouncer.x <= 0 and not last_bounces[index] == 'left':
+        elif bouncer.x - bouncers_vel[index][0] <= 0 and not last_bounces[index] == 'left':
             bouncers_vel[index][0] *= -1
             bouncers_vel[index][0] += random.randint(0, 4)
-            bouncers_vel[index][1] += random.choice([-1, 1])
-            bouncers_vel[index][1] *= (1 + random.randint(-5, 4))
+            if bouncer.y + bouncers_vel[index][1] >= SCREEN_HEIGHT + bouncers_vel[index][1] - 5 or bouncer.y + bouncers_vel[index][1] <= 0 + bouncers_vel[index][1] + 5:
+                bouncers_vel[index][1] *= -1
+            else:
+                bouncers_vel[index][1] += random.choice([-1, 1])
+                bouncers_vel[index][1] += (1 + random.randint(-5, 4))
             last_bounces[index] = "left"
             for i in range(3):
                 particles.append(
                     particle(bouncer.x, bouncer.y, random.randrange(-5, 5), random.randrange(-2, 0), 5, 5, BLUE, 1))
             bounces_survived += 1
-        if bouncer.y + bouncer.height >= SCREEN_HEIGHT and not last_bounces[index] == 'down':
+        if bouncer.y + bouncer.height + bouncers_vel[index][1] >= SCREEN_HEIGHT and not last_bounces[index] == 'down':
             bouncers_vel[index][1] *= -1
             bouncers_vel[index][1] += random.randint(-4, 0)
             bouncers_vel[index][0] += random.choice([-1, 1])
@@ -450,7 +454,7 @@ def bouncer_movement(player):
                 particles.append(
                     particle(bouncer.x, bouncer.y, random.randrange(-5, 5), random.randrange(-2, 0), 5, 5, BLUE, 1))
             bounces_survived += 1
-        elif bouncer.y <= 0 and not last_bounces[index] == 'up':
+        elif bouncer.y - bouncers_vel[index][1] <= 0 and not last_bounces[index] == 'up':
             bouncers_vel[index][1] *= -1
             bouncers_vel[index][1] += random.randint(0, 4)
             bouncers_vel[index][0] += random.choice([-1, 1])
@@ -460,6 +464,8 @@ def bouncer_movement(player):
                 particles.append(
                     particle(bouncer.x, bouncer.y, random.randrange(-5, 5), random.randrange(-2, 0), 5, 5, BLUE, 1))
             bounces_survived += 1
+        bouncer.x += bouncers_vel[index][0]
+        bouncer.y += bouncers_vel[index][1]
         if bouncers_vel[index][0] > 10:
             bouncers_vel[index][0] = 10
         if bouncers_vel[index][1] > 10:
@@ -580,10 +586,10 @@ async def main():
                         BOUNCER_MIN_DMG = 5
                         BOUNCER_MAX_DMG = 20
                         health_img = pygame.transform.scale(pygame.image.load(os.path.join('pictures', 'health.png')), (40, 40))
-                        HEAL_MIN = 30
-                        HEAL_MAX = 50
+                        HEAL_MIN = 15
+                        HEAL_MAX = 35
                         HEALTH_PACK_SIZE = 40
-                        HEALTH_PACK_CHANCE = 2000
+                        HEALTH_PACK_CHANCE = 1300
                         first = False
                     if event.key == pygame.K_2:
                         bounce_multiplier = 3
@@ -595,10 +601,10 @@ async def main():
                         BOUNCER_MIN_DMG = 10
                         BOUNCER_MAX_DMG = 25
                         health_img = pygame.transform.scale(pygame.image.load(os.path.join('pictures', 'health.png')), (25, 25))
-                        HEAL_MIN = 20
-                        HEAL_MAX = 40
+                        HEAL_MIN = 15
+                        HEAL_MAX = 30
                         HEALTH_PACK_SIZE = 25
-                        HEALTH_PACK_CHANCE = 2300
+                        HEALTH_PACK_CHANCE = 1450
                         first = False
                     if event.key == pygame.K_3:
                         bounce_multiplier = 2
@@ -686,7 +692,7 @@ async def main():
                 quit()
 
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_ESCAPE:
+                if event.key == pygame.K_ESCAPE and pause == False:
                     pause = True
 
             while pause:
@@ -700,7 +706,17 @@ async def main():
                         if event.key == pygame.K_ESCAPE:
                             pause = False
                             draw_window(player, mini_square)
+                            await asyncio.sleep(0)
+                            pause_text = HEALTH_TEXT.render("Resuming", 1, WHITE)
+                            shake_screen.blit(pause_text, (
+                    SCREEN_WIDTH / 2 - pause_text.get_width() / 2, SCREEN_HEIGHT / 2 - pause_text.get_height() / 2 - 100))
+                            await asyncio.sleep(0)
+                            pygame.display.update()
+                            await asyncio.sleep(0)
                             pygame.time.delay(2000)
+                            await asyncio.sleep(0)
+                            draw_window(player, mini_square)
+                            await asyncio.sleep(0)
                         elif event.key == pygame.K_TAB:
                             lives = 1
                             health = 0
@@ -719,7 +735,9 @@ async def main():
                 screen.blit(restart_text, (SCREEN_WIDTH / 2 - restart_text.get_width() / 2,
                                            SCREEN_HEIGHT / 2 - restart_text.get_height() / 2 - 120))
                 shake_screen.blit(screen, next(offset))
+                await asyncio.sleep(0)
                 pygame.display.update()
+                await asyncio.sleep(0)
 
         trail.insert(0, [player.x, player.y])
         if len(trail) > TRAIL_LENGTH:
@@ -763,6 +781,7 @@ async def main():
             last_bounces.append("")
             bouncer_trails.append([[randx, randy]])
             bounce_limit *= bounce_multiplier
+            bounce_limit += (random.randint(round(bounces_survived/8) * -1, round(bounces_survived/8)))
             BOUNCER_SOUND.play()
             for i in range(40):
                 particles.append(
