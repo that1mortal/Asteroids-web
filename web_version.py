@@ -14,6 +14,7 @@ RED = (255, 0, 0)
 ORANGE = (170, 115, 55)
 GREEN = (0, 255, 0)
 BLUE = (0, 0, 255)
+PINK = (255, 0, 135)
 
 HEALTH_PACK_MIN = 75
 HEALTH_PACK_CHANCE = 1200
@@ -21,6 +22,11 @@ HEAL_MIN = 15
 HEAL_MAX = 35
 
 FPS = 60
+
+MAX_PLAYER_VEL = 16
+
+HEALTH_BAR_WIDTH = 500
+HEALTH_BAR_HEIGHT = 30
 
 HIT_SOUND = pygame.mixer.Sound(os.path.join('sfx', 'hit.wav'))
 WALL_SOUND = pygame.mixer.Sound(os.path.join('sfx', 'wall.wav'))
@@ -33,6 +39,7 @@ LOSE_FONT = pygame.font.SysFont('framd', 200)
 SUB_TEXT = pygame.font.SysFont('framd', 40)
 HEALTH_TEXT = pygame.font.SysFont('framd', 80)
 SCORE_TEXT = pygame.font.SysFont('famd', 60)
+RETRO_TEXT = pygame.font.Font('Retro Gaming.ttf', 50)
 
 first = True
 
@@ -59,6 +66,18 @@ BOUNCER_TRAIL_REMOVE = 0.7
 BOUNCER_MIN_DMG = 10
 BOUNCER_MAX_DMG = 25
 
+MAX_LIVES = 3
+lives = 1
+pu_lives = []
+
+HEART_SIZE = 64
+heart_img = pygame.transform.scale(pygame.image.load(os.path.join('pictures', 'heart.png')),
+                                    (HEART_SIZE, HEART_SIZE))
+
+PU_HEALTH_SIZE = 50
+heart_pu_img = pygame.transform.scale(pygame.image.load(os.path.join('pictures', 'healthpu.png')),
+                                    (PU_HEALTH_SIZE, PU_HEALTH_SIZE))
+
 MINI_SQUARE_WIDTH = 15
 MINI_SQUARE_HEIGHT = 15
 MINI_SQUARE_TRAIL_LEN = 2000
@@ -72,6 +91,8 @@ SIZE_REMOVE_AMOUNT = 1
 PLAYER_WIDTH = 30
 PLAYER_HEIGHT = 30
 PLAYER_VEL = 8
+
+total_lives = 1
 
 HEALTH_PACK_SIZE = 25
 health_img = pygame.transform.scale(pygame.image.load(os.path.join('pictures', 'health.png')),
@@ -108,6 +129,7 @@ class particle():
         self.gravity_scale = gravity_scale * random.randrange(1, 2)
         self.lifetime = random.randrange(50, 200)
         self.gravity = random.randrange(5, 10)
+        self.lifetime = 100
 
     def draw(self, display):
         self.lifetime -= 1
@@ -119,17 +141,31 @@ class particle():
 
 particles = []
 
+class float_text():
+
+    def __init__(self, x, y, up_speed, x_velocity, color, font, text):
+        self.x = x
+        self.y = y
+        self.up_speed = up_speed
+        self.x_velocity = x_velocity
+        self.color = color
+        self.font = font
+        self.text = text
+        self.lifetime = random.randint(90, 110)
+
+    def draw(self, display):
+        self.lifetime -= 1
+        self.x += self.x_velocity
+        self.y += self.up_speed
+        render_text = self.font.render(self.text, 1, self.color)
+        display.blit(render_text, (self.x, self.y))
+
+float_texts = []
 
 def draw_window(player, mini_square):
-    global trail, mini_trail, health, bouncer_trails, bouncers, offset, health_packs, particles, health_img, speed_packs, speed_img
+    global trail, mini_trail, health, bouncer_trails, bouncers, offset, health_packs, particles, health_img, speed_packs, speed_img, float_texts, lives, pu_lives
 
     screen.fill(BLACK)
-
-    health_text = HEALTH_TEXT.render("Health: " + str(health), 1, WHITE)
-    screen.blit(health_text, (SCREEN_WIDTH / 2 - health_text.get_width() / 2, 20))
-
-    score_text = SCORE_TEXT.render("Score: " + str(bounces_survived), 1, WHITE)
-    screen.blit(score_text, (20, 20))
 
     pygame.draw.rect(screen, ORANGE, mini_square)
 
@@ -138,6 +174,10 @@ def draw_window(player, mini_square):
     if len(health_packs) > 0:
         for pack in health_packs:
             screen.blit(health_img, (pack.x, pack.y))
+    
+    if len(pu_lives) > 0:
+        for pack in pu_lives:
+            screen.blit(heart_pu_img, (pack.x, pack.y))
     
     if len(speed_packs) > 0:
         for pack in speed_packs:
@@ -151,6 +191,17 @@ def draw_window(player, mini_square):
         if p.lifetime == 0:
             particles.pop(index)
         p.draw(screen)
+        index += 1
+
+    if len(pu_lives) > 0:
+        for pack in pu_lives:
+            screen.blit(heart_pu_img, (pack.x, pack.y))
+
+    index = 0
+    for t in float_texts:
+        if t.lifetime == 0:
+            float_texts.pop(index)
+        t.draw(screen)
         index += 1
 
     trail_remove = 0
@@ -180,6 +231,17 @@ def draw_window(player, mini_square):
 
     shake_screen.blit(screen, next(offset))
 
+    x_add = 0
+    for i in range(lives):
+        shake_screen.blit(heart_img, (SCREEN_WIDTH - 250 + x_add + 5, 32))
+        x_add += HEART_SIZE
+
+    pygame.draw.rect(shake_screen, RED, (SCREEN_WIDTH/2 - HEALTH_BAR_WIDTH/2, 50, HEALTH_BAR_WIDTH, HEALTH_BAR_HEIGHT))
+    pygame.draw.rect(shake_screen, GREEN, (SCREEN_WIDTH/2 - HEALTH_BAR_WIDTH/2, 50, health * 5, HEALTH_BAR_HEIGHT))
+
+    score_text = SCORE_TEXT.render("Score: " + str(bounces_survived), 1, WHITE)
+    shake_screen.blit(score_text, (20, 20))
+
     pygame.display.update()
 
 
@@ -196,7 +258,7 @@ def screen_shake(intensity, amplitude):
 
 
 def player_movement(player, keys_pressed):
-    global PLAYER_VEL, trail, offset, health
+    global PLAYER_VEL, trail, offset, health, float_texts
 
     if keys_pressed[pygame.K_w] or keys_pressed[pygame.K_UP]:
         if player.y - PLAYER_VEL > 0:
@@ -204,48 +266,56 @@ def player_movement(player, keys_pressed):
         else:
             if not trail[1][1] == player.y:
                 WALL_SOUND.play()
-                health -= random.randint(2, 6)
+                remove_amount = random.randint(2, 6)
+                health -= remove_amount
+                float_texts.append(float_text(player.x, player.y, 10, random.randint(-4, 4), RED, RETRO_TEXT, ("-" + str(remove_amount))))
                 for i in range(15):
                     particles.append(
                         particle(player.x, player.y, random.randrange(-5, 5), random.randrange(-2, 0), 10, 10, RED, 1))
-                offset = screen_shake(3, 10)
+                offset = screen_shake(5, 20)
     if keys_pressed[pygame.K_s] or keys_pressed[pygame.K_DOWN]:
         if player.y + PLAYER_VEL + PLAYER_HEIGHT < SCREEN_HEIGHT:
             player.y += PLAYER_VEL
         else:
             if not trail[1][1] == player.y:
                 WALL_SOUND.play()
-                health -= random.randint(2, 6)
+                remove_amount = random.randint(2, 6)
+                health -= remove_amount
+                float_texts.append(float_text(player.x, player.y, -10, random.randint(-4, 4), RED, RETRO_TEXT, ("-" + str(remove_amount))))
                 for i in range(15):
                     particles.append(
                         particle(player.x, player.y, random.randrange(-5, 5), random.randrange(-2, 0), 10, 10, RED, 1))
-                offset = screen_shake(3, 10)
+                offset = screen_shake(5, 20)
     if keys_pressed[pygame.K_a] or keys_pressed[pygame.K_LEFT]:
         if player.x - PLAYER_VEL > 0:
             player.x -= PLAYER_VEL
         else:
             if not trail[1][0] == player.x:
                 WALL_SOUND.play()
-                health -= random.randint(2, 6)
+                remove_amount = random.randint(2, 6)
+                health -= remove_amount
+                float_texts.append(float_text(player.x, player.y, -10, 4, RED, RETRO_TEXT, ("-" + str(remove_amount))))
                 for i in range(15):
                     particles.append(
                         particle(player.x, player.y, random.randrange(-5, 5), random.randrange(-2, 0), 10, 10, RED, 1))
-                offset = screen_shake(3, 10)
+                offset = screen_shake(5, 20)
     if keys_pressed[pygame.K_d] or keys_pressed[pygame.K_RIGHT]:
         if player.x + PLAYER_VEL + PLAYER_WIDTH < SCREEN_WIDTH:
             player.x += PLAYER_VEL
         else:
             if not trail[1][0] == player.x:
                 WALL_SOUND.play()
-                health -= random.randint(2, 6)
+                remove_amount = random.randint(2, 6)
+                health -= remove_amount
+                float_texts.append(float_text(player.x, player.y, -10, -4, RED, RETRO_TEXT, ("-" + str(remove_amount))))
                 for i in range(15):
                     particles.append(
                         particle(player.x, player.y, random.randrange(-5, 5), random.randrange(-2, 0), 10, 10, RED, 1))
-                offset = screen_shake(3, 10)
+                offset = screen_shake(5, 20)
 
 
 def mini_square_movement(player, mini_square):
-    global health, offset, MINI_SQUARE_MIN_DMG, MINI_SQUARE_MAX_DMG, particles
+    global health, offset, MINI_SQUARE_MIN_DMG, MINI_SQUARE_MAX_DMG, particles, pu_lives
 
     if player.x + PLAYER_WIDTH / 4 - mini_square.x < 0 and not player.x + PLAYER_WIDTH / 4 - mini_square.x == 0:
         mini_square.x -= MINI_SQUARE_SPEED
@@ -277,9 +347,11 @@ def mini_square_movement(player, mini_square):
                              ORANGE, 3))
 
     if mini_square.colliderect(player):
-        health -= random.randint(MINI_SQUARE_MIN_DMG, MINI_SQUARE_MAX_DMG)
+        remove_amount = random.randint(MINI_SQUARE_MIN_DMG, MINI_SQUARE_MAX_DMG)
+        health -= remove_amount
         HIT_SOUND.play()
-        offset = screen_shake(5, 20)
+        offset = screen_shake(40, 120)
+        float_texts.append(float_text(player.x, player.y, random.randint(-10, 10), random.randint(-5, 5), RED, RETRO_TEXT, ("-" + str(remove_amount))))
         for i in range(15):
             particles.append(
                 particle(mini_square.x, mini_square.y, random.randrange(-5, 5), random.randrange(-2, 0), 6, 6, ORANGE,
@@ -296,7 +368,9 @@ def mini_square_movement(player, mini_square):
 
 
 async def lose_screen():
-    global run, bounces_survived, bounce_multiplier
+    global run, bounces_survived, bounce_multiplier, offset
+
+    offset = screen_shake(50, 200)
 
     lose_text = LOSE_FONT.render("You Died!", 1, RED)
     sub_text = SUB_TEXT.render("Press Space to play again", 1, WHITE)
@@ -308,7 +382,7 @@ async def lose_screen():
     if bounce_multiplier == 2:
         diff_text = SCORE_TEXT.render("Hard Difficulty", 1, RED)
     if bounce_multiplier == 8:
-        diff_text = SCORE_TEXT.render("R*tard Mode", 1, BLUE)
+        diff_text = SCORE_TEXT.render("How did you die???? (unless if u restarted)", 1, BLUE)
 
     dead = True
 
@@ -334,13 +408,13 @@ async def lose_screen():
         screen.blit(score_text, (
             SCREEN_WIDTH / 2 - score_text.get_width() / 2, SCREEN_HEIGHT / 2 - score_text.get_height() / 2 - 140))
         screen.blit(diff_text, (SCREEN_WIDTH / 2 - diff_text.get_width() / 2, 100))
-        shake_screen.blit(screen, (0, 0))
+        shake_screen.blit(screen, next(offset))
         pygame.display.update()
         run = False
 
 
 def bouncer_movement(player):
-    global bouncers, BOUNCER_VEL_X, BOUNCER_VEL_Y, bounces_survived, bouncers_vel, health, can_dmg, hit_on_bounce, offset, BOUNCER_MIN_DMG, BOUNCER_MAX_DMG, bouncer_trails, last_bounces
+    global bouncers, BOUNCER_VEL_X, BOUNCER_VEL_Y, bounces_survived, bouncers_vel, health, can_dmg, hit_on_bounce, offset, BOUNCER_MIN_DMG, BOUNCER_MAX_DMG, bouncer_trails, last_bounces, float_texts
 
     index = 0
     for bouncer in bouncers:
@@ -396,22 +470,26 @@ def bouncer_movement(player):
             bouncers_vel[index][1] = -10
         if bouncer.colliderect(player):
             if hit_on_bounce < bounces_survived - len(bouncers):
-                health -= random.randint(BOUNCER_MIN_DMG, BOUNCER_MAX_DMG)
+                remove_amount = random.randint(BOUNCER_MIN_DMG, BOUNCER_MAX_DMG)
+                health -= remove_amount
+                float_texts.append(float_text(player.x, player.y, random.randint(-10, 10), random.randint(-5, 5), RED, RETRO_TEXT, ("-" + str(remove_amount))))
                 HIT_SOUND.play()
                 for i in range(30):
                     particles.append(
                         particle(player.x, player.y, random.randrange(-5, 5), random.randrange(-2, 0), 10, 10, RED, 1))
-                offset = screen_shake(5, 20)
+                offset = screen_shake(40, 120)
                 hit_on_bounce = bounces_survived
         index += 1
 
 def health_handler(player):
-    global health, health_packs
+    global health, health_packs, float_texts
 
     index = 0
     for pack in health_packs:
         if pack.colliderect(player):
-            health += random.randint(HEAL_MIN, HEAL_MAX)
+            add_amount = random.randint(HEAL_MIN, HEAL_MAX)
+            health += add_amount
+            float_texts.append(float_text(player.x, player.y, random.randint(-10, 10), random.randint(-4, 4), GREEN, RETRO_TEXT, ("+" + str(add_amount))))
             health_packs.pop(index)
             HEALTH_SOUND.play()
             for i in range(30):
@@ -422,22 +500,42 @@ def health_handler(player):
 
         index += 1
 
+def pu_live_handler(player):
+    global lives, pu_lives, float_texts, total_lives
+
+    index = 0
+    for pack in pu_lives:
+        if pack.colliderect(player):
+            lives += 1
+            pu_lives.pop(index)
+            total_lives += 1
+            float_texts.append(float_text(player.x, player.y, -random.randint(-5, 5), random.randint(-2, 2), PINK, RETRO_TEXT, "+1 Life!"))
+            PU_SPEED_SOUND.play()
+            for i in range(50):
+                particles.append(
+                    particle(player.x, player.y, random.randrange(-5, 5), random.randrange(-1, 0), 10, 10, PINK, 0))
+        index += 1
+
 def pu_speed_handler(player):
-    global PLAYER_VEL, speed_packs
+    global PLAYER_VEL, speed_packs, float_texts
 
     index = 0
     for pack in speed_packs:
         if pack.colliderect(player):
-            PLAYER_VEL += random.randint(1, 3)
+            speed_add = random.randint(1, 3)
+            PLAYER_VEL += speed_add
+            if PLAYER_VEL > MAX_PLAYER_VEL:
+                PLAYER_VEL = MAX_PLAYER_VEL
             PU_SPEED_SOUND.play()
             speed_packs.pop(index)
+            float_texts.append(float_text(player.x, player.y, -5, random.randint(-2, 2), BLUE, RETRO_TEXT, ("+" + str(speed_add) + " Speed!")))
             for i in range(50):
                 particles.append(
                     particle(player.x, player.y, random.randrange(-5, 5), random.randrange(-1, 0), 10, 10, BLUE, 0))
         index += 1
 
 async def main():
-    global trail, bounces_survived, mini_trail, health, run, bouncer_trails, bouncers, bouncers_vel, hit_on_bounce, health_packs, diff_change, first, particles, last_bounces, health_img, HEALTH_PACK_SIZE, offset, bounce_multiplier, PLAYER_VEL, MINI_SQUARE_SPEED, HEAL_MAX, HEAL_MIN, HEALTH_PACK_CHANCE, MINI_SQUARE_MIN_DMG, MINI_SQUARE_MAX_DMG, pu_goal, speed_packs, PU_SPEED_SIZE
+    global trail, bounces_survived, mini_trail, health, run, bouncer_trails, bouncers, bouncers_vel, hit_on_bounce, health_packs, diff_change, first, particles, last_bounces, health_img, HEALTH_PACK_SIZE, offset, bounce_multiplier, PLAYER_VEL, MINI_SQUARE_SPEED, HEAL_MAX, HEAL_MIN, HEALTH_PACK_CHANCE, MINI_SQUARE_MIN_DMG, MINI_SQUARE_MAX_DMG, pu_goal, speed_packs, PU_SPEED_SIZE, float_texts, pu_lives, lives, total_lives, BOUNCER_MIN_DMG, BOUNCER_MAX_DMG
 
     pause = False
 
@@ -447,11 +545,19 @@ async def main():
 
     run = True
 
+    total_lives = 1
+
     last_bounces = [""]
 
     speed_packs = []
 
+    float_texts = []
+
     health_packs = []
+
+    pu_lives = []
+
+    lives = 1
 
     bounce_multiplier = 3
 
@@ -467,15 +573,17 @@ async def main():
                     if event.key == pygame.K_1:
                         bounce_multiplier = 4
                         PLAYER_VEL = 12
-                        MINI_SQUARE_MIN_DMG = 10
-                        MINI_SQUARE_MAX_DMG = 25
+                        MINI_SQUARE_MIN_DMG = 5
+                        MINI_SQUARE_MAX_DMG = 20
                         MINI_SQUARE_SPEED = 4
                         HEALTH_PACK_MIN = 90
+                        BOUNCER_MIN_DMG = 5
+                        BOUNCER_MAX_DMG = 20
                         health_img = pygame.transform.scale(pygame.image.load(os.path.join('pictures', 'health.png')), (40, 40))
                         HEAL_MIN = 30
                         HEAL_MAX = 50
                         HEALTH_PACK_SIZE = 40
-                        HEALTH_PACK_CHANCE = 2500
+                        HEALTH_PACK_CHANCE = 2000
                         first = False
                     if event.key == pygame.K_2:
                         bounce_multiplier = 3
@@ -484,29 +592,35 @@ async def main():
                         MINI_SQUARE_MAX_DMG = 25
                         MINI_SQUARE_SPEED = 5
                         HEALTH_PACK_MIN = 90
+                        BOUNCER_MIN_DMG = 10
+                        BOUNCER_MAX_DMG = 25
                         health_img = pygame.transform.scale(pygame.image.load(os.path.join('pictures', 'health.png')), (25, 25))
                         HEAL_MIN = 20
                         HEAL_MAX = 40
                         HEALTH_PACK_SIZE = 25
-                        HEALTH_PACK_CHANCE = 4500
+                        HEALTH_PACK_CHANCE = 2300
                         first = False
                     if event.key == pygame.K_3:
                         bounce_multiplier = 2
                         PLAYER_VEL = 8
-                        MINI_SQUARE_MIN_DMG = 25
-                        MINI_SQUARE_MAX_DMG = 45
+                        MINI_SQUARE_MIN_DMG = 20
+                        MINI_SQUARE_MAX_DMG = 35
                         MINI_SQUARE_SPEED = 6
                         HEALTH_PACK_MIN = 45
                         health_img = pygame.transform.scale(pygame.image.load(os.path.join('pictures', 'health.png')), (15, 15))
                         HEAL_MIN = 20
                         HEAL_MAX = 45
+                        BOUNCER_MIN_DMG = 15
+                        BOUNCER_MAX_DMG = 30
                         HEALTH_PACK_SIZE = 15
-                        HEALTH_PACK_CHANCE = 5500
+                        HEALTH_PACK_CHANCE = 3000
                         first = False
                     if event.key == pygame.K_0:
                         bounce_multiplier = 8
                         PLAYER_VEL = 16
                         MINI_SQUARE_MIN_DMG = 2
+                        BOUNCER_MIN_DMG = 3
+                        BOUNCER_MAX_DMG = 1
                         MINI_SQUARE_MAX_DMG = 5
                         MINI_SQUARE_SPEED = 1
                         HEALTH_PACK_MIN = 99
@@ -514,7 +628,7 @@ async def main():
                         HEAL_MIN = 100
                         HEAL_MAX = 100
                         HEALTH_PACK_SIZE = 80
-                        HEALTH_PACK_CHANCE = 1
+                        HEALTH_PACK_CHANCE = 400
                         first = False
             
             await asyncio.sleep(0)
@@ -588,6 +702,7 @@ async def main():
                             draw_window(player, mini_square)
                             pygame.time.delay(2000)
                         elif event.key == pygame.K_TAB:
+                            lives = 1
                             health = 0
                             pause = False
                 
@@ -622,11 +737,19 @@ async def main():
             mini_trail.pop(MINI_SQUARE_TRAIL_LEN)
 
         if health <= 0:
-            health = 0
-            draw_window(player, mini_square)
-            DEATH_SOUND.play()
-            pygame.time.delay(1000)
-            await lose_screen()
+            if lives < 2:
+                health = 0
+                draw_window(player, mini_square)
+                DEATH_SOUND.play()
+                pygame.time.delay(1000)
+                await lose_screen()
+            else:
+                health = 100
+                lives -= 1
+                offset = screen_shake(140, 560)
+                player = pygame.Rect(SCREEN_WIDTH / 2 - PLAYER_WIDTH / 2, SCREEN_HEIGHT / 2 - PLAYER_HEIGHT / 2, PLAYER_WIDTH,
+                         PLAYER_HEIGHT)
+                DEATH_SOUND.play()
 
         if bounces_survived > 5:
             diff_change = False
@@ -652,11 +775,16 @@ async def main():
                                                 HEALTH_PACK_SIZE))
 
         if bounces_survived >= pu_goal:
-            pu_goal += 100
-            if True: # will be a random value when more powerups are added
+            choice = random.randint(1, 2)
+            pu_goal += round(bounces_survived + (bounces_survived/4)) + random.randint(50, 100)
+            if choice == 1 and not PLAYER_VEL >= MAX_PLAYER_VEL: # will be a random value when more powerups are added
                 speed_packs.append(pygame.Rect(random.randint(PU_SPEED_SIZE, SCREEN_WIDTH - PU_SPEED_SIZE),
                                                 random.randint(15, SCREEN_HEIGHT - 15), PU_SPEED_SIZE,
                                                 PU_SPEED_SIZE))
+            elif choice == 2 and not total_lives >= MAX_LIVES: # will be a random value when more powerups are added
+                pu_lives.append(pygame.Rect(random.randint(HEART_SIZE, SCREEN_WIDTH - HEART_SIZE),
+                                                random.randint(15, SCREEN_HEIGHT - 15), HEART_SIZE,
+                                                HEART_SIZE))
 
         await asyncio.sleep(0)
 
@@ -666,6 +794,7 @@ async def main():
         bouncer_movement(player)
         health_handler(player)
         pu_speed_handler(player)
+        pu_live_handler(player)
         draw_window(player, mini_square)
 
     await main()
