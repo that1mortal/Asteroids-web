@@ -419,11 +419,18 @@ def bouncer_movement(player):
     index = 0
     for bouncer in bouncers:
         corner = False
-        if bouncer.x + bouncer.width + bouncers_vel[index][0] >= SCREEN_WIDTH and not last_bounces[index] == 'right':
+        bouncer.x += bouncers_vel[index][0]
+        bouncer.y += bouncers_vel[index][1]
+        if bouncer.x + bouncer.width + (bouncers_vel[index][0] * 2) + 5 >= SCREEN_WIDTH and not last_bounces[index] == 'right':
             bouncers_vel[index][0] *= -1
             bouncers_vel[index][0] += random.randint(-4, 0)
-            if bouncer.y + bouncers_vel[index][1] >= SCREEN_HEIGHT + bouncers_vel[index][1] - 5 or bouncer.y + bouncers_vel[index][1] <= 0 + bouncers_vel[index][1] + 5:
+            if bouncer.y + bouncers_vel[index][1] >= SCREEN_HEIGHT - (bouncers_vel[index][1] * 2):
                 bouncers_vel[index][1] *= -1
+                bouncers_vel[index][1] += random.randint(3, 5)
+                corner = True
+            elif bouncer.y - bouncers_vel[index][1] <= 5 - (bouncers_vel[index][1] * 2):
+                bouncers_vel[index][1] *= -1
+                bouncers_vel[index][1] -= random.randint(3, 5)
                 corner = True
             else:
                 bouncers_vel[index][1] += random.choice([-1, 1])
@@ -433,11 +440,16 @@ def bouncer_movement(player):
                 particles.append(
                     particle(bouncer.x, bouncer.y, random.randrange(-5, 5), random.randrange(-2, 0), 5, 5, BLUE, 1))
             bounces_survived += 1
-        elif bouncer.x - bouncers_vel[index][0] <= 0 and not last_bounces[index] == 'left':
+        elif bouncer.x + (bouncers_vel[index][0] * 2) - 5 <= 0 and not last_bounces[index] == 'left':
             bouncers_vel[index][0] *= -1
             bouncers_vel[index][0] += random.randint(0, 4)
-            if bouncer.y + bouncers_vel[index][1] >= SCREEN_HEIGHT + bouncers_vel[index][1] - 5 or bouncer.y + bouncers_vel[index][1] <= 0 + bouncers_vel[index][1] + 5:
+            if bouncer.y + bouncers_vel[index][1] >= SCREEN_HEIGHT - (bouncers_vel[index][1] * 2):
                 bouncers_vel[index][1] *= -1
+                bouncers_vel[index][1] += random.randint(3, 5)
+                corner = True
+            elif bouncer.y - bouncers_vel[index][1] <= 5 - (bouncers_vel[index][1] * 2):
+                bouncers_vel[index][1] *= -1
+                bouncers_vel[index][1] -= random.randint(3, 5)
                 corner = True
             else:
                 bouncers_vel[index][1] += random.choice([-1, 1])
@@ -447,7 +459,7 @@ def bouncer_movement(player):
                 particles.append(
                     particle(bouncer.x, bouncer.y, random.randrange(-5, 5), random.randrange(-2, 0), 5, 5, BLUE, 1))
             bounces_survived += 1
-        if bouncer.y + bouncer.height + bouncers_vel[index][1] >= SCREEN_HEIGHT and not last_bounces[index] == 'down' and corner == False:
+        if bouncer.y + bouncer.height + (bouncers_vel[index][1] * 2) + 5 >= SCREEN_HEIGHT and not last_bounces[index] == 'down' and corner == False:
             bouncers_vel[index][1] *= -1
             bouncers_vel[index][1] += random.randint(-4, 0)
             bouncers_vel[index][0] += random.choice([-1, 1])
@@ -457,7 +469,7 @@ def bouncer_movement(player):
                 particles.append(
                     particle(bouncer.x, bouncer.y, random.randrange(-5, 5), random.randrange(-2, 0), 5, 5, BLUE, 1))
             bounces_survived += 1
-        elif bouncer.y - bouncers_vel[index][1] <= 0 and not last_bounces[index] == 'up' and coner == False:
+        elif bouncer.y <= 0 - ( bouncers_vel[index][1] * 2) - 5 and not last_bounces[index] == 'up' and corner == False:
             bouncers_vel[index][1] *= -1
             bouncers_vel[index][1] += random.randint(0, 4)
             bouncers_vel[index][0] += random.choice([-1, 1])
@@ -467,8 +479,6 @@ def bouncer_movement(player):
                 particles.append(
                     particle(bouncer.x, bouncer.y, random.randrange(-5, 5), random.randrange(-2, 0), 5, 5, BLUE, 1))
             bounces_survived += 1
-        bouncer.x += bouncers_vel[index][0]
-        bouncer.y += bouncers_vel[index][1]
         if bouncers_vel[index][0] > 10:
             bouncers_vel[index][0] = 10
         if bouncers_vel[index][1] > 10:
