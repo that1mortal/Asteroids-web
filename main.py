@@ -286,7 +286,8 @@ def player_movement(player, keys_pressed):
                 WALL_SOUND.play()
                 remove_amount = random.randint(2, 6)
                 health -= remove_amount
-                dash -= random.randint(20, 100)
+                if dash < DASH_GOAL:
+                    dash -= random.randint(20, 100)
                 float_texts.append(float_text(player.x, player.y, 10, random.randint(-4, 4), RED, RETRO_TEXT, ("-" + str(remove_amount))))
                 for i in range(15):
                     particles.append(
@@ -304,7 +305,8 @@ def player_movement(player, keys_pressed):
                 WALL_SOUND.play()
                 remove_amount = random.randint(2, 6)
                 health -= remove_amount
-                dash -= random.randint(20, 100)
+                if dash < DASH_GOAL:
+                    dash -= random.randint(20, 100)
                 float_texts.append(float_text(player.x, player.y, 10, random.randint(-4, 4), RED, RETRO_TEXT, ("-" + str(remove_amount))))
                 for i in range(15):
                     particles.append(
@@ -322,7 +324,8 @@ def player_movement(player, keys_pressed):
                 WALL_SOUND.play()
                 remove_amount = random.randint(2, 6)
                 health -= remove_amount
-                dash -= random.randint(20, 100)
+                if dash < DASH_GOAL:
+                    dash -= random.randint(20, 100)
                 float_texts.append(float_text(player.x, player.y, 10, random.randint(-4, 4), RED, RETRO_TEXT, ("-" + str(remove_amount))))
                 for i in range(15):
                     particles.append(
@@ -340,7 +343,8 @@ def player_movement(player, keys_pressed):
                 WALL_SOUND.play()
                 remove_amount = random.randint(2, 6)
                 health -= remove_amount
-                dash -= random.randint(20, 100)
+                if dash < DASH_GOAL:
+                    dash -= random.randint(20, 100)
                 float_texts.append(float_text(player.x, player.y, 10, random.randint(-4, 4), RED, RETRO_TEXT, ("-" + str(remove_amount))))
                 for i in range(15):
                     particles.append(
@@ -385,7 +389,8 @@ def mini_square_movement(player, mini_square):
     if mini_square.colliderect(player):
         remove_amount = random.randint(MINI_SQUARE_MIN_DMG, MINI_SQUARE_MAX_DMG)
         health -= remove_amount
-        dash -= random.randint(DASH_REMOVE_MIN, DASH_REMOVE_MAX)
+        if dash < DASH_GOAL:
+            dash -= random.randint(DASH_REMOVE_MIN, DASH_REMOVE_MAX)
         if dash < 0:
             dash = 0
         float_texts.append(float_text(player.x, player.y, random.randint(-10, 10), random.randint(-5, 5), RED, RETRO_TEXT, ("-" + str(remove_amount))))
@@ -530,7 +535,8 @@ def bouncer_movement(player):
             if hit_on_bounce < bounces_survived - len(bouncers):
                 remove_amount = random.randint(BOUNCER_MIN_DMG, BOUNCER_MAX_DMG)
                 health -= remove_amount
-                dash -= random.randint(DASH_REMOVE_MIN, DASH_REMOVE_MAX)
+                if dash < DASH_GOAL:
+                    dash -= random.randint(DASH_REMOVE_MIN, DASH_REMOVE_MAX)
                 float_texts.append(float_text(player.x, player.y, random.randint(-10, 10), random.randint(-5, 5), RED, RETRO_TEXT, ("-" + str(remove_amount))))
                 HIT_SOUND.play()
                 for i in range(30):
