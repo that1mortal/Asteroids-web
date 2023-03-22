@@ -86,6 +86,21 @@ MINI_SQUARE_SPEED = 4
 MINI_SQUARE_MIN_DMG = 20
 MINI_SQUARE_MAX_DMG = 40
 
+MAX_PLAYER_VEL = 16
+
+DB_WIDTH_MULTIPLIER = 0.3
+DASH_GOAL = 1000
+DASH_BAR_WIDTH = DASH_GOAL * DB_WIDTH_MULTIPLIER
+DASH_BAR_HEIGHT = 20
+DASH_AMOUNT = 100
+DASH_REMOVE_MIN = 50
+DASH_REMOVE_MAX = 350
+dash = 0
+dready = False
+pdirx = 1
+pdiry = 1
+dbcolor = BLUE
+
 TRAIL_LENGTH = 50
 SIZE_REMOVE_AMOUNT = 1
 PLAYER_WIDTH = 30
@@ -163,7 +178,7 @@ class float_text():
 float_texts = []
 
 def draw_window(player, mini_square):
-    global trail, mini_trail, health, bouncer_trails, bouncers, offset, health_packs, particles, health_img, speed_packs, speed_img, float_texts, lives, pu_lives
+    global trail, mini_trail, health, bouncer_trails, bouncers, offset, health_packs, particles, health_img, speed_packs, speed_img, float_texts, lives, pu_lives, dash, dbcolor
 
     screen.fill(BLACK)
 
@@ -239,6 +254,9 @@ def draw_window(player, mini_square):
     pygame.draw.rect(shake_screen, RED, (SCREEN_WIDTH/2 - HEALTH_BAR_WIDTH/2, 50, HEALTH_BAR_WIDTH, HEALTH_BAR_HEIGHT))
     pygame.draw.rect(shake_screen, GREEN, (SCREEN_WIDTH/2 - HEALTH_BAR_WIDTH/2, 50, health * 5, HEALTH_BAR_HEIGHT))
 
+    pygame.draw.rect(shake_screen, RED, (SCREEN_WIDTH/2 - DASH_BAR_WIDTH/2, 90, DASH_BAR_WIDTH, DASH_BAR_HEIGHT))
+    pygame.draw.rect(shake_screen, dbcolor, (SCREEN_WIDTH/2 - DASH_BAR_WIDTH/2, 90, dash * DB_WIDTH_MULTIPLIER, DASH_BAR_HEIGHT))
+
     score_text = SCORE_TEXT.render("Score: " + str(bounces_survived), 1, WHITE)
     shake_screen.blit(score_text, (20, 20))
 
@@ -256,66 +274,84 @@ def screen_shake(intensity, amplitude):
     while True:
         yield 0, 0
 
-
 def player_movement(player, keys_pressed):
-    global PLAYER_VEL, trail, offset, health, float_texts
+    global PLAYER_VEL, trail, offset, health, float_texts, pdirx, pdiry, dash
 
     if keys_pressed[pygame.K_w] or keys_pressed[pygame.K_UP]:
         if player.y - PLAYER_VEL > 0:
             player.y -= PLAYER_VEL
+            pdiry = -1
         else:
             if not trail[1][1] == player.y:
                 WALL_SOUND.play()
                 remove_amount = random.randint(2, 6)
                 health -= remove_amount
+                dash -= random.randint(20, 100)
                 float_texts.append(float_text(player.x, player.y, 10, random.randint(-4, 4), RED, RETRO_TEXT, ("-" + str(remove_amount))))
                 for i in range(15):
                     particles.append(
                         particle(player.x, player.y, random.randrange(-5, 5), random.randrange(-2, 0), 10, 10, RED, 1))
-                offset = screen_shake(5, 20)
+                if health > 0:
+                    offset = screen_shake(5, 20)
+    elif not keys_pressed[pygame.K_s] and not keys_pressed[pygame.K_DOWN]:
+        pdiry = 0
     if keys_pressed[pygame.K_s] or keys_pressed[pygame.K_DOWN]:
         if player.y + PLAYER_VEL + PLAYER_HEIGHT < SCREEN_HEIGHT:
             player.y += PLAYER_VEL
+            pdiry = 1
         else:
             if not trail[1][1] == player.y:
                 WALL_SOUND.play()
                 remove_amount = random.randint(2, 6)
                 health -= remove_amount
-                float_texts.append(float_text(player.x, player.y, -10, random.randint(-4, 4), RED, RETRO_TEXT, ("-" + str(remove_amount))))
+                dash -= random.randint(20, 100)
+                float_texts.append(float_text(player.x, player.y, 10, random.randint(-4, 4), RED, RETRO_TEXT, ("-" + str(remove_amount))))
                 for i in range(15):
                     particles.append(
                         particle(player.x, player.y, random.randrange(-5, 5), random.randrange(-2, 0), 10, 10, RED, 1))
-                offset = screen_shake(5, 20)
+                if health > 0:
+                    offset = screen_shake(5, 20)
+    elif not keys_pressed[pygame.K_w] and not keys_pressed[pygame.K_UP]:
+        pdiry = 0
     if keys_pressed[pygame.K_a] or keys_pressed[pygame.K_LEFT]:
         if player.x - PLAYER_VEL > 0:
             player.x -= PLAYER_VEL
+            pdirx = -1
         else:
             if not trail[1][0] == player.x:
                 WALL_SOUND.play()
                 remove_amount = random.randint(2, 6)
                 health -= remove_amount
-                float_texts.append(float_text(player.x, player.y, -10, 4, RED, RETRO_TEXT, ("-" + str(remove_amount))))
+                dash -= random.randint(20, 100)
+                float_texts.append(float_text(player.x, player.y, 10, random.randint(-4, 4), RED, RETRO_TEXT, ("-" + str(remove_amount))))
                 for i in range(15):
                     particles.append(
                         particle(player.x, player.y, random.randrange(-5, 5), random.randrange(-2, 0), 10, 10, RED, 1))
-                offset = screen_shake(5, 20)
+                if health > 0:
+                    offset = screen_shake(5, 20)
+    elif not keys_pressed[pygame.K_d] and not keys_pressed[pygame.K_RIGHT]:
+        pdirx = 0
     if keys_pressed[pygame.K_d] or keys_pressed[pygame.K_RIGHT]:
         if player.x + PLAYER_VEL + PLAYER_WIDTH < SCREEN_WIDTH:
             player.x += PLAYER_VEL
+            pdirx = 1
         else:
             if not trail[1][0] == player.x:
                 WALL_SOUND.play()
                 remove_amount = random.randint(2, 6)
                 health -= remove_amount
-                float_texts.append(float_text(player.x, player.y, -10, -4, RED, RETRO_TEXT, ("-" + str(remove_amount))))
+                dash -= random.randint(20, 100)
+                float_texts.append(float_text(player.x, player.y, 10, random.randint(-4, 4), RED, RETRO_TEXT, ("-" + str(remove_amount))))
                 for i in range(15):
                     particles.append(
                         particle(player.x, player.y, random.randrange(-5, 5), random.randrange(-2, 0), 10, 10, RED, 1))
-                offset = screen_shake(5, 20)
-
+                if health > 0:
+                    offset = screen_shake(5, 20)
+    elif not keys_pressed[pygame.K_a] and not keys_pressed[pygame.K_LEFT]:
+        pdirx = 0
 
 def mini_square_movement(player, mini_square):
-    global health, offset, MINI_SQUARE_MIN_DMG, MINI_SQUARE_MAX_DMG, particles, pu_lives
+    global health, offset, MINI_SQUARE_MIN_DMG, MINI_SQUARE_MAX_DMG, particles, float_texts, dash
 
     if player.x + PLAYER_WIDTH / 4 - mini_square.x < 0 and not player.x + PLAYER_WIDTH / 4 - mini_square.x == 0:
         mini_square.x -= MINI_SQUARE_SPEED
@@ -349,9 +385,13 @@ def mini_square_movement(player, mini_square):
     if mini_square.colliderect(player):
         remove_amount = random.randint(MINI_SQUARE_MIN_DMG, MINI_SQUARE_MAX_DMG)
         health -= remove_amount
-        HIT_SOUND.play()
-        offset = screen_shake(40, 120)
+        dash -= random.randint(DASH_REMOVE_MIN, DASH_REMOVE_MAX)
+        if dash < 0:
+            dash = 0
         float_texts.append(float_text(player.x, player.y, random.randint(-10, 10), random.randint(-5, 5), RED, RETRO_TEXT, ("-" + str(remove_amount))))
+        HIT_SOUND.play()
+        if health > 0:
+            offset = screen_shake(40, 120)
         for i in range(15):
             particles.append(
                 particle(mini_square.x, mini_square.y, random.randrange(-5, 5), random.randrange(-2, 0), 6, 6, ORANGE,
@@ -365,7 +405,6 @@ def mini_square_movement(player, mini_square):
             particles.append(
                 particle(mini_square.x, mini_square.y, random.randrange(-5, 5), random.randrange(-2, 0), 8, 8, ORANGE,
                          0))
-
 
 async def lose_screen():
     global run, bounces_survived, bounce_multiplier, offset
@@ -414,7 +453,7 @@ async def lose_screen():
 
 
 def bouncer_movement(player):
-    global bouncers, BOUNCER_VEL_X, BOUNCER_VEL_Y, bounces_survived, bouncers_vel, health, can_dmg, hit_on_bounce, offset, BOUNCER_MIN_DMG, BOUNCER_MAX_DMG, bouncer_trails, last_bounces, float_texts
+    global bouncers, BOUNCER_VEL_X, BOUNCER_VEL_Y, bounces_survived, bouncers_vel, health, can_dmg, hit_on_bounce, offset, BOUNCER_MIN_DMG, BOUNCER_MAX_DMG, bouncer_trails, last_bounces, float_texts, dash
 
     index = 0
     for bouncer in bouncers:
@@ -491,6 +530,7 @@ def bouncer_movement(player):
             if hit_on_bounce < bounces_survived - len(bouncers):
                 remove_amount = random.randint(BOUNCER_MIN_DMG, BOUNCER_MAX_DMG)
                 health -= remove_amount
+                dash -= random.randint(DASH_REMOVE_MIN, DASH_REMOVE_MAX)
                 float_texts.append(float_text(player.x, player.y, random.randint(-10, 10), random.randint(-5, 5), RED, RETRO_TEXT, ("-" + str(remove_amount))))
                 HIT_SOUND.play()
                 for i in range(30):
@@ -553,8 +593,36 @@ def pu_speed_handler(player):
                     particle(player.x, player.y, random.randrange(-5, 5), random.randrange(-1, 0), 10, 10, BLUE, 0))
         index += 1
 
+def dash_handler(player, keys_pressed):
+    global dash, dready, pdirx, pdiry, dbcolor
+
+    if dready == False:
+        dash += 1
+        if dash == DASH_GOAL:
+            dready = True
+    
+    if dash < DASH_GOAL:
+        dready = False
+        dbcolor = BLUE
+    else:
+        dbcolor = GREEN
+
+    if keys_pressed[pygame.K_SPACE]:
+        if dash == DASH_GOAL:
+            player.x += DASH_AMOUNT * pdirx
+            player.y += DASH_AMOUNT * pdiry
+            dash = 0
+            if player.x >= SCREEN_WIDTH:
+                player.x = SCREEN_WIDTH - PLAYER_WIDTH - 10
+            elif player.x <= 0:
+                player.x = PLAYER_WIDTH + 10
+            if player.y >= SCREEN_HEIGHT:
+                player.y = SCREEN_HEIGHT - PLAYER_HEIGHT - 10
+            elif player.y <= 0:
+                player.y = PLAYER_HEIGHT + 10
+
 async def main():
-    global trail, bounces_survived, mini_trail, health, run, bouncer_trails, bouncers, bouncers_vel, hit_on_bounce, health_packs, diff_change, first, particles, last_bounces, health_img, HEALTH_PACK_SIZE, offset, bounce_multiplier, PLAYER_VEL, MINI_SQUARE_SPEED, HEAL_MAX, HEAL_MIN, HEALTH_PACK_CHANCE, MINI_SQUARE_MIN_DMG, MINI_SQUARE_MAX_DMG, pu_goal, speed_packs, PU_SPEED_SIZE, float_texts, pu_lives, lives, total_lives, BOUNCER_MIN_DMG, BOUNCER_MAX_DMG
+    global trail, bounces_survived, mini_trail, health, run, bouncer_trails, bouncers, bouncers_vel, hit_on_bounce, health_packs, diff_change, first, particles, last_bounces, health_img, HEALTH_PACK_SIZE, offset, bounce_multiplier, PLAYER_VEL, MINI_SQUARE_SPEED, HEAL_MAX, HEAL_MIN, HEALTH_PACK_CHANCE, MINI_SQUARE_MIN_DMG, MINI_SQUARE_MAX_DMG, pu_goal, speed_packs, PU_SPEED_SIZE, float_texts, pu_lives, lives, total_lives, BOUNCER_MIN_DMG, BOUNCER_MAX_DMG, dash, dready, pdirx, pdiry, DASH_AMOUNT, DASH_REMOVE_MIN, DASHH_REMOVE_MAX, DASH_GOAL, DASH_BAR_WIDTH
 
     pause = False
 
@@ -563,6 +631,9 @@ async def main():
     first = True
 
     run = True
+
+    dash = 0
+    dready = False
 
     total_lives = 1
 
@@ -598,6 +669,11 @@ async def main():
                         HEALTH_PACK_MIN = 90
                         BOUNCER_MIN_DMG = 5
                         BOUNCER_MAX_DMG = 20
+                        DASH_REMOVE_MIN = 50
+                        DASH_REMOVE_MAX = 275
+                        DASH_AMOUNT = 175
+                        DASH_GOAL = 750
+                        DASH_BAR_WIDTH = DASH_GOAL * DB_WIDTH_MULTIPLIER
                         health_img = pygame.transform.scale(pygame.image.load(os.path.join('pictures', 'health.png')), (40, 40))
                         HEAL_MIN = 15
                         HEAL_MAX = 35
@@ -613,6 +689,11 @@ async def main():
                         HEALTH_PACK_MIN = 90
                         BOUNCER_MIN_DMG = 10
                         BOUNCER_MAX_DMG = 25
+                        DASH_REMOVE_MIN = 50
+                        DASH_REMOVE_MAX = 350
+                        DASH_AMOUNT = 100
+                        DASH_GOAL = 1000
+                        DASH_BAR_WIDTH = DASH_GOAL * DB_WIDTH_MULTIPLIER
                         health_img = pygame.transform.scale(pygame.image.load(os.path.join('pictures', 'health.png')), (25, 25))
                         HEAL_MIN = 15
                         HEAL_MAX = 30
@@ -626,6 +707,11 @@ async def main():
                         MINI_SQUARE_MAX_DMG = 35
                         MINI_SQUARE_SPEED = 6
                         HEALTH_PACK_MIN = 45
+                        DASH_REMOVE_MIN = 100
+                        DASH_REMOVE_MAX = 450
+                        DASH_AMOUNT = 50
+                        DASH_GOAL = 2000
+                        DASH_BAR_WIDTH = DASH_GOAL * DB_WIDTH_MULTIPLIER
                         health_img = pygame.transform.scale(pygame.image.load(os.path.join('pictures', 'health.png')), (15, 15))
                         HEAL_MIN = 20
                         HEAL_MAX = 45
@@ -643,6 +729,11 @@ async def main():
                         MINI_SQUARE_MAX_DMG = 5
                         MINI_SQUARE_SPEED = 1
                         HEALTH_PACK_MIN = 99
+                        DASH_REMOVE_MIN = 1
+                        DASH_REMOVE_MAX = 5
+                        DASH_AMOUNT = 250
+                        DASH_GOAL = 10
+                        DASH_BAR_WIDTH = DASH_GOAL * DB_WIDTH_MULTIPLIER
                         health_img = pygame.transform.scale(pygame.image.load(os.path.join('pictures', 'health.png')), (80, 80))
                         HEAL_MIN = 100
                         HEAL_MAX = 100
@@ -826,6 +917,7 @@ async def main():
         bouncer_movement(player)
         health_handler(player)
         pu_speed_handler(player)
+        dash_handler(player, keys_pressed)
         pu_live_handler(player)
         draw_window(player, mini_square)
 
