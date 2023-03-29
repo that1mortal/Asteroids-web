@@ -15,12 +15,16 @@ ORANGE = (170, 115, 55)
 GREEN = (0, 255, 0)
 BLUE = (0, 0, 255)
 PINK = (255, 0, 135)
+YELLOW = (236, 252, 3)
 DASH_COLOR = (178, 171, 255)
 
 HEALTH_PACK_MIN = 75
 HEALTH_PACK_CHANCE = 1200
 HEAL_MIN = 15
 HEAL_MAX = 35
+
+bounce_limit = 5
+bounces_survived = 0
 
 PARTICLE_LIMIT = 75
 
@@ -40,6 +44,8 @@ LOSE_FONT = pygame.font.SysFont('framd', 200)
 SUB_TEXT = pygame.font.SysFont('framd', 40)
 HEALTH_TEXT = pygame.font.SysFont('framd', 80)
 SCORE_TEXT = pygame.font.SysFont('famd', 50)
+
+stars = []
 
 DASH_ADD = 1
 
@@ -91,9 +97,12 @@ MINI_SQUARE_MAX_DMG = 40
 
 MAX_PLAYER_VEL = 16
 
+dash_ccd = 0
+dash_pause = False
+wait = 0
 
 HEALTH_WIDTH_MULTIPLIER = 3
-DB_WIDTH_MULTIPLIER = 0.3
+DB_WIDTH_MULTIPLIER = 0.05
 DASH_GOAL = 1000
 DASH_BAR_WIDTH = DASH_GOAL * DB_WIDTH_MULTIPLIER
 DASH_BAR_HEIGHT = 20
@@ -129,6 +138,12 @@ PU_SPEED_SIZE = 50
 speed_img = pygame.transform.scale(pygame.image.load(os.path.join('pictures', 'speed.png')),
                                     (PU_SPEED_SIZE, PU_SPEED_SIZE))
 PU_SPEED_SOUND = pygame.mixer.Sound(os.path.join('sfx', 'speed.wav'))
+
+PU_STAR_SIZE = 50
+star_img = pygame.transform.scale(pygame.image.load(os.path.join('pictures', 'star.png')),
+                                    (PU_STAR_SIZE, PU_STAR_SIZE))
+
+star_goal = 650
 
 SCREEN_WIDTH = 1280
 SCREEN_HEIGHT = 720
@@ -188,8 +203,9 @@ class float_text():
 
 float_texts = []
 health = 100
+
 def draw_window(player, mini_square):
-    global trail, mini_trail, health, bouncer_trails, bouncers, offset, health_packs, particles, health_img, speed_packs, speed_img, health, lives, heart_img, pu_lives, heart_pu_img, dash, dbcolor, pcolor
+    global trail, mini_trail, health, bouncer_trails, bouncers, offset, health_packs, particles, health_img, speed_packs, speed_img, health, lives, heart_img, pu_lives, heart_pu_img, dash, dbcolor, pcolor, stars
 
     screen.fill(BLACK)
 
@@ -222,6 +238,10 @@ def draw_window(player, mini_square):
     if len(pu_lives) > 0:
         for pack in pu_lives:
             screen.blit(heart_pu_img, (pack.x, pack.y))
+
+    if len(stars) > 0:
+        for star in stars:
+            screen.blit(star_img, (star.x, star.y))
 
     index = 0
     for t in float_texts:
@@ -274,7 +294,7 @@ def draw_window(player, mini_square):
 
     pygame.display.update()
 
-
+acitve = False
 def screen_shake(intensity, amplitude):
     s = -1
     for i in range(0, 3):
@@ -287,7 +307,7 @@ def screen_shake(intensity, amplitude):
         yield 0, 0
 
 def player_movement(player, keys_pressed):
-    global PLAYER_VEL, trail, offset, health, float_texts, pdirx, pdiry, dash, control
+    global PLAYER_VEL, trail, offset, health, float_texts, pdirx, pdiry, dash, control, dash_pause, dash_ccd, dash_pause, wait
 
     if keys_pressed[pygame.K_w] or keys_pressed[pygame.K_UP] and control == True:
         if player.y - PLAYER_VEL > 0:
@@ -299,7 +319,10 @@ def player_movement(player, keys_pressed):
                 remove_amount = random.randint(2, 6)
                 health -= remove_amount
                 if dash < DASH_GOAL:
-                    dash -= random.randint(20, 100)
+                    dash -= random.randint(120, 600)
+                    wait = to_seconds(random.randint(1, 5), FPS)
+                    dash_pause = True
+                    dash_ccd = 0
                 float_texts.append(float_text(player.x, player.y, 10, random.randint(-4, 4), RED, RETRO_TEXT, ("-" + str(remove_amount))))
                 for i in range(15):
                     particles.append(
@@ -318,7 +341,10 @@ def player_movement(player, keys_pressed):
                 remove_amount = random.randint(2, 6)
                 health -= remove_amount
                 if dash < DASH_GOAL:
-                    dash -= random.randint(20, 100)
+                    dash -= random.randint(120, 600)
+                    wait = to_seconds(random.randint(1, 5), FPS)
+                    dash_pause = True
+                    dash_ccd = 0
                 float_texts.append(float_text(player.x, player.y, 10, random.randint(-4, 4), RED, RETRO_TEXT, ("-" + str(remove_amount))))
                 for i in range(15):
                     particles.append(
@@ -337,7 +363,10 @@ def player_movement(player, keys_pressed):
                 remove_amount = random.randint(2, 6)
                 health -= remove_amount
                 if dash < DASH_GOAL:
-                    dash -= random.randint(20, 100)
+                    dash -= random.randint(120, 600)
+                    wait = to_seconds(random.randint(1, 5), FPS)
+                    dash_pause = True
+                    dash_ccd = 0
                 float_texts.append(float_text(player.x, player.y, 10, random.randint(-4, 4), RED, RETRO_TEXT, ("-" + str(remove_amount))))
                 for i in range(15):
                     particles.append(
@@ -356,7 +385,10 @@ def player_movement(player, keys_pressed):
                 remove_amount = random.randint(2, 6)
                 health -= remove_amount
                 if dash < DASH_GOAL:
-                    dash -= random.randint(20, 100)
+                    dash -= random.randint(120, 600)
+                    wait = to_seconds(random.randint(1, 5), FPS)
+                    dash_pause = True
+                    dash_ccd = 0
                 float_texts.append(float_text(player.x, player.y, 10, random.randint(-4, 4), RED, RETRO_TEXT, ("-" + str(remove_amount))))
                 for i in range(15):
                     particles.append(
@@ -367,7 +399,7 @@ def player_movement(player, keys_pressed):
         pdirx = 0
 
 def mini_square_movement(player, mini_square):
-    global health, offset, MINI_SQUARE_MIN_DMG, MINI_SQUARE_MAX_DMG, particles, float_texts, dash, MINI_SQUARE_SPEED
+    global health, offset, MINI_SQUARE_MIN_DMG, MINI_SQUARE_MAX_DMG, particles, float_texts, dash, MINI_SQUARE_SPEED, dash_pause, dash_ccd, wait
 
     if player.x + PLAYER_WIDTH / 4 - mini_square.x < 0 and not player.x + PLAYER_WIDTH / 4 - mini_square.x == 0:
         mini_square.x -= MINI_SQUARE_SPEED
@@ -383,6 +415,9 @@ def mini_square_movement(player, mini_square):
         health -= remove_amount
         if dash < DASH_GOAL:
             dash -= random.randint(DASH_REMOVE_MIN, DASH_REMOVE_MAX)
+            wait = to_seconds(random.randint(1, 5), FPS)
+            dash_pause = True
+            dash_ccd = 0
         if dash < 0:
             dash = 0
         float_texts.append(float_text(player.x, player.y, random.randint(-10, 10), random.randint(-5, 5), RED, RETRO_TEXT, ("-" + str(remove_amount))))
@@ -402,7 +437,6 @@ def mini_square_movement(player, mini_square):
             particles.append(
                 particle(mini_square.x, mini_square.y, random.randrange(-5, 5), random.randrange(-2, 0), 8, 8, ORANGE,
                          0))
-
 
 async def lose_screen():
     global run, bounces_survived, bounce_multiplier, offset
@@ -449,9 +483,25 @@ async def lose_screen():
         pygame.display.update()
         run = False
 
+def to_seconds(seconds, FPS):
+    return FPS * seconds
+
+heal_cooldown = 0
+def passive_healing_handler(player, heal_amount, cooldown, active):
+    global health, particles, float_texts, heal_cooldown
+
+    heal_cooldown += 1
+    if heal_cooldown >= cooldown and active:
+        health += heal_amount
+        for i in range(10):
+            particles.append(
+                particle(player.x, player.y, random.randrange(-5, 5), random.randrange(-1, 0), 10, 10, GREEN, 1))
+        float_texts.append(
+            float_text(player.x, player.y, 10, random.randint(-4, 4), GREEN, RETRO_TEXT, ("+" + str(heal_amount))))
+        heal_cooldown = 0
 
 def bouncer_movement(player):
-    global bouncers, BOUNCER_VEL_X, BOUNCER_VEL_Y, bounces_survived, bouncers_vel, health, can_dmg, hit_on_bounce, offset, BOUNCER_MIN_DMG, BOUNCER_MAX_DMG, bouncer_trails, last_bounces, float_texts, dash, SCORE_AMOUNT
+    global bouncers, BOUNCER_VEL_X, BOUNCER_VEL_Y, bounces_survived, bouncers_vel, health, can_dmg, hit_on_bounce, offset, BOUNCER_MIN_DMG, BOUNCER_MAX_DMG, bouncer_trails, last_bounces, float_texts, dash, SCORE_AMOUNT, dash_ccd, dash_pause, wait
 
     index = 0
     for bouncer in bouncers:
@@ -518,6 +568,9 @@ def bouncer_movement(player):
                 health -= remove_amount
                 if dash < DASH_GOAL:
                     dash -= random.randint(DASH_REMOVE_MIN, DASH_REMOVE_MAX)
+                    wait = to_seconds(random.randint(1, 5), FPS)
+                    dash_pause = True
+                    dash_ccd = 0
                 float_texts.append(float_text(player.x, player.y, random.randint(-10, 10), random.randint(-5, 5), RED, RETRO_TEXT, ("-" + str(remove_amount))))
                 HIT_SOUND.play()
                 for i in range(30):
@@ -531,6 +584,10 @@ def health_handler(player):
     global health, health_packs, MAX_HEALTH
 
     index = 0
+
+    if health > MAX_HEALTH:
+        health = MAX_HEALTH
+
     for pack in health_packs:
         if pack.colliderect(player):
             add_amount = random.randint(HEAL_MIN, HEAL_MAX)
@@ -589,15 +646,22 @@ SCORE_AMOUNT = 1
 MAX_DASH_ADD = 15
 
 def dash_handler(player, keys_pressed):
-    global dash, dready, pdirx, pdiry, pcolor, dbcolor, dashing, dashingamount, control, curdirx, curdiry, trail, bouncer_trails, bouncers, bouncers_vel, last_bounces, float_texts, SCORE_AMOUNT, DASH_ADD, BOUNCER_ADD, health, PLAYER_VEL, SIZE_REMOVE_AMOUNT, MAX_BOUNCERS, MAX_DASH_ADD, HEALTH_PACK_CHANCE, HEAL_MAX, HEAL_MIN, DASH_ADD, MINI_SQUARE_MAX_DMG, MINI_SQUARE_MIN_DMG, BOUNCER_MAX_DMG, BOUNCER_MIN_DMG, MINI_SQUARE_SPEED, PLAYER_VEL, MAX_HEALTH, health, HEALTH_BAR_WIDTH
+    global dash, dready, pdirx, pdiry, pcolor, dbcolor, dashing, dashingamount, control, curdirx, curdiry, trail, bouncer_trails, bouncers, bouncers_vel, last_bounces, float_texts, SCORE_AMOUNT, DASH_ADD, BOUNCER_ADD, health, PLAYER_VEL, SIZE_REMOVE_AMOUNT, MAX_BOUNCERS, MAX_DASH_ADD, HEALTH_PACK_CHANCE, HEAL_MAX, HEAL_MIN, DASH_ADD, MINI_SQUARE_MAX_DMG, MINI_SQUARE_MIN_DMG, BOUNCER_MAX_DMG, BOUNCER_MIN_DMG, MINI_SQUARE_SPEED, PLAYER_VEL, MAX_HEALTH, health, HEALTH_BAR_WIDTH, dash_ccd, dash_pause, wait
 
     if dash < 0:
         dash = 0
 
     if dready == False:
-        dash += 1
-        if dash == DASH_GOAL:
-            dready = True
+        if not dash_pause:
+            dash += DASH_ADD
+            if dash  + DASH_ADD >= DASH_GOAL:
+                dash = DASH_GOAL
+                dready = True
+        else:
+            dash_ccd += 1
+            if dash_ccd >= wait:
+                dash_pause = False
+                dash_ccd = 0
 
     if dashing == True:
         player.x += curdirx + (3 * curdirx) + (PLAYER_VEL * curdirx)
@@ -624,12 +688,15 @@ def dash_handler(player, keys_pressed):
 
                     if deadb == True:
                         bouncers.pop(index)
+                        print("dead")
                         bouncer_trails.pop(index)
                         bouncers_vel.pop(index)
                         last_bounces.pop(index)
                         BDEATH_SOUND.play()
                         SCORE_AMOUNT += 1
-                        add_amount = random.randint(HEAL_MIN, HEAL_MAX)
+                        add_amount = round(MAX_HEALTH / (len(bouncers) + 1)) + random.randint(-25, 40)
+                        if add_amount < 0:
+                            add_amount = random.randint(10, 15)
                         health += add_amount
                         if health > 100:
                             health = 100
@@ -640,10 +707,10 @@ def dash_handler(player, keys_pressed):
                             particles.append(
                                 particle(player.x, player.y, random.randrange(-5, 5), random.randrange(-1, 0), 10, 10,
                                          GREEN, 0))
-                        DASH_ADD *= 3
+                        DASH_ADD -= random.randint(1, 3)
                         if DASH_ADD > MAX_DASH_ADD:
                             DASH_ADD = MAX_DASH_ADD
-                        BOUNCER_ADD += 1
+                        BOUNCER_ADD = random.randint(1, 3)
                         if BOUNCER_ADD > 3:
                             BOUNCER_ADD = 3
                         for i in range(BOUNCER_ADD):
@@ -675,7 +742,6 @@ def dash_handler(player, keys_pressed):
                                 MAX_HEALTH = 175
                             HEALTH_WIDTH_MULTIPLIER = 3
                             HEALTH_BAR_WIDTH = MAX_HEALTH * HEALTH_WIDTH_MULTIPLIER
-                            health = MAX_HEALTH
                             BOUNCER_MIN_DMG += random.randint(5, 10)
                             BOUNCER_MAX_DMG += random.randint(11, 20)
                             MINI_SQUARE_MIN_DMG += random.randint(5, 10)
@@ -716,15 +782,16 @@ def dash_handler(player, keys_pressed):
                     deadb = True
                 if deadb == True:
                     bouncers.pop(index)
+                    print("dead")
                     bouncer_trails.pop(index)
                     BDEATH_SOUND.play()
                     bouncers_vel.pop(index)
                     last_bounces.pop(index)
                     SCORE_AMOUNT += 1
-                    DASH_ADD *= 3
-                    if DASH_ADD > MAX_DASH_ADD:
-                        DASH_ADD = MAX_DASH_ADD
-                    BOUNCER_ADD += 1
+                    DASH_ADD -= random.randint(1, 3)
+                    if DASH_ADD < 0:
+                        DASH_ADD = 1
+                    BOUNCER_ADD = random.randint(1, 3)
                     if BOUNCER_ADD > 3:
                         BOUNCER_ADD = 3
                     add_amount = random.randint(HEAL_MIN, HEAL_MAX)
@@ -776,7 +843,9 @@ def dash_handler(player, keys_pressed):
                             MAX_HEALTH = 175
                         HEALTH_WIDTH_MULTIPLIER = 3
                         HEALTH_BAR_WIDTH = MAX_HEALTH * HEALTH_WIDTH_MULTIPLIER
-                        health = MAX_HEALTH
+                        add_amount = round(MAX_HEALTH / (len(bouncers) + 1)) + random.randint(-25, 40)
+                        if add_amount < 0:
+                            add_amount = random.randint(10, 15)
                         BOUNCER_MIN_DMG += random.randint(5, 10)
                         BOUNCER_MAX_DMG += random.randint(11, 20)
                         MINI_SQUARE_MIN_DMG += random.randint(5, 10)
@@ -860,8 +929,58 @@ def dash_handler(player, keys_pressed):
             elif player.y <= 0:
                 player.y = PLAYER_HEIGHT + 10
 
+def star_handler(player):
+    global health, MAX_BOUNCERS, MINI_SQUARE_MAX_DMG, MINI_SQUARE_MIN_DMG, BOUNCER_MAX_DMG, BOUNCER_MIN_DMG, stars, MAX_HEALTH, bouncers, particles, float_texts, HEALTH_PACK_CHANCE, HEAL_MIN, HEAL_MAX, bounce_limit, bounces_survived
+
+    index = 0
+    for star in stars:
+        if star.colliderect(player):
+            stars.pop(index)
+            add_amount = random.randint(15, 35)
+            HEAL_MIN += random.randint(5, 15)
+            HEAL_MAX += random.randint(15, 30)
+            health += add_amount
+            bounce_limit -= bounce_limit - bounces_survived
+            bounce_limit += random.randint((bounce_limit - bounces_survived) * -1, (bounce_limit - bounces_survived))
+            HEALTH_PACK_CHANCE -= random.randint(250, 1100)
+            if HEALTH_PACK_CHANCE < 1500:
+                HEALTH_PACK_CHANCE = 1500
+            if health > MAX_HEALTH:
+                health = MAX_HEALTH
+            bounce_purge = random.randint(1, 3)
+            if len(bouncers) <= bounce_purge:
+                bounce_purge = len(bouncers) - 1
+            purge_num = 0
+            for i in range(30):
+                particles.append(
+                    particle(player.x, player.y, random.randrange(-5, 5), random.randrange(-2, 0), 10, 10, YELLOW, 0))
+            float_texts.append(float_text(player.x, player.y, 10, random.randint(-4, 4), GREEN, RETRO_TEXT,
+                                          ("+" + str(add_amount))))
+            for i in range(bounce_purge):
+                for i in range(30):
+                    particles.append(
+                        particle(bouncers[purge_num].x, bouncers[purge_num].y, random.randrange(-5, 5), random.randrange(-2, 0), 10, 10, BLUE,
+                                 0))
+                bouncers.pop(purge_num)
+                bouncer_trails.pop(purge_num)
+                bouncers_vel.pop(purge_num)
+                last_bounces.pop(purge_num)
+                purge_num += 1
+            BOUNCER_MAX_DMG -= random.randint(5, 15)
+            BOUNCER_MIN_DMG -= random.randint(15, 25)
+            MINI_SQUARE_MAX_DMG -= random.randint(5, 15)
+            MINI_SQUARE_MIN_DMG -= random.randint(15, 25)
+            if BOUNCER_MAX_DMG < 20:
+                BOUNCER_MAX_DMG = 20
+            if BOUNCER_MIN_DMG < 10:
+                BOUNCER_MIN_DMG = 10
+            if MINI_SQUARE_MAX_DMG < 20:
+                MINI_SQUARE_MAX_DMG = 20
+            if MINI_SQUARE_MIN_DMG < 10:
+                MINI_SQUARE_MIN_DMG = 10
+
 async def main():
-    global trail, bounces_survived, PARTICLE_LIMIT, pcolor, mini_trail, HEALTH_WIDTH_MULTIPLIER, run, bouncer_trails, bouncers, health, bouncers_vel, hit_on_bounce, health_packs, diff_change, first, particles, last_bounces, health_img, HEALTH_PACK_SIZE, offset, bounce_multiplier, PLAYER_VEL, MINI_SQUARE_SPEED, HEAL_MAX, HEAL_MIN, HEALTH_PACK_CHANCE, MINI_SQUARE_MIN_DMG, MINI_SQUARE_MAX_DMG, pu_goal, speed_packs, PU_SPEED_SIZE, float_texts, pu_lives, lives, total_lives, BOUNCER_MIN_DMG, BOUNCER_MAX_DMG, dash, dready, pdirx, pdiry, DASH_AMOUNT, DASH_REMOVE_MIN, DASH_REMOVE_MAX, DASH_GOAL, DASH_BAR_WIDTH, TRAIL_LENGTH, SCORE_AMOUNT, DASH_ADD, BOUNCER_ADD, MAX_BOUNCERS, MAX_DASH_ADD, MAX_HEALTH, HEALTH_BAR_WIDTH
+    global trail, bounce_limit, bounces_survived, active, cd, PARTICLE_LIMIT, pcolor, mini_trail, HEALTH_WIDTH_MULTIPLIER, star_goal, run, bouncer_trails, bouncers, health, bouncers_vel, hit_on_bounce, health_packs, diff_change, first, particles, last_bounces, health_img, HEALTH_PACK_SIZE, offset, bounce_multiplier, PLAYER_VEL, MINI_SQUARE_SPEED, HEAL_MAX, HEAL_MIN, HEALTH_PACK_CHANCE, MINI_SQUARE_MIN_DMG, MINI_SQUARE_MAX_DMG, pu_goal, speed_packs, PU_SPEED_SIZE, float_texts, pu_lives, lives, total_lives, BOUNCER_MIN_DMG, BOUNCER_MAX_DMG, dash, dready, pdirx, pdiry, DASH_AMOUNT, DASH_REMOVE_MIN, DASH_REMOVE_MAX, DASH_GOAL, DASH_BAR_WIDTH, TRAIL_LENGTH, SCORE_AMOUNT, DASH_ADD, BOUNCER_ADD, MAX_BOUNCERS, MAX_DASH_ADD, MAX_HEALTH, HEALTH_BAR_WIDTH, stars, wait, dash_ccd, dash_pause
 
     pause = False
 
@@ -871,16 +990,24 @@ async def main():
 
     SCORE_AMOUNT = 1
 
-    PARTICLE_LIMIT = 75
+    star_goal = 650
+
+    PARTICLE_LIMIT = 200
 
     MAX_HEALTH = 100
 
     pcolor = RED
 
+    wait = 0
+    dash_ccd = 0
+    dash_pause = False
+
     first = True
 
     dash = 0
     dready = False
+
+    active = False
 
     lives = 1
     total_lives = 1
@@ -911,7 +1038,7 @@ async def main():
                     if event.key == pygame.K_1:
                         bounce_multiplier = 4
                         PLAYER_VEL = 12
-                        DASH_ADD = 4
+                        DASH_ADD = 18
                         MAX_DASH_ADD = 50
                         MAX_BOUNCERS = 6
                         MINI_SQUARE_MIN_DMG = 5
@@ -921,10 +1048,10 @@ async def main():
                         BOUNCER_MIN_DMG = 5
                         SCORE_AMOUNT = 1
                         BOUNCER_MAX_DMG = 20
-                        DASH_REMOVE_MIN = 25
-                        DASH_REMOVE_MAX = 175
+                        DASH_REMOVE_MIN = 150
+                        DASH_REMOVE_MAX = 1050
                         DASH_AMOUNT = 30
-                        DASH_GOAL = 750
+                        DASH_GOAL = 4500
                         DASH_BAR_WIDTH = DASH_GOAL * DB_WIDTH_MULTIPLIER
                         health_img = pygame.transform.scale(pygame.image.load(os.path.join('pictures', 'health.png')), (40, 40))
                         HEAL_MIN = 15
@@ -940,15 +1067,15 @@ async def main():
                         MINI_SQUARE_SPEED = 5
                         SCORE_AMOUNT = 2
                         MAX_BOUNCERS = 8
-                        DASH_ADD = 2
+                        DASH_ADD = 12
                         MAX_DASH_ADD = 35
                         HEALTH_PACK_MIN = 90
                         BOUNCER_MIN_DMG = 10
                         BOUNCER_MAX_DMG = 25
-                        DASH_REMOVE_MIN = 35
-                        DASH_REMOVE_MAX = 215
+                        DASH_REMOVE_MIN = 210
+                        DASH_REMOVE_MAX = 1290
                         DASH_AMOUNT = 30
-                        DASH_GOAL = 1000
+                        DASH_GOAL = 6000
                         DASH_BAR_WIDTH = DASH_GOAL * DB_WIDTH_MULTIPLIER
                         health_img = pygame.transform.scale(pygame.image.load(os.path.join('pictures', 'health.png')), (25, 25))
                         HEAL_MIN = 15
@@ -964,13 +1091,13 @@ async def main():
                         MINI_SQUARE_SPEED = 5
                         HEALTH_PACK_MIN = 45
                         MAX_BOUNCERS = 10
-                        DASH_ADD = 1
+                        DASH_ADD = 6
                         MAX_DASH_ADD = 25
-                        DASH_REMOVE_MIN = 50
-                        DASH_REMOVE_MAX = 275
+                        DASH_REMOVE_MIN = 300
+                        DASH_REMOVE_MAX = 1650
                         DASH_AMOUNT = 15
                         SCORE_AMOUNT = 3
-                        DASH_GOAL = 1600
+                        DASH_GOAL = 9600
                         DASH_BAR_WIDTH = DASH_GOAL * DB_WIDTH_MULTIPLIER
                         health_img = pygame.transform.scale(pygame.image.load(os.path.join('pictures', 'health.png')), (15, 15))
                         HEAL_MIN = 20
@@ -992,10 +1119,10 @@ async def main():
                         MINI_SQUARE_MAX_DMG = 5
                         MINI_SQUARE_SPEED = 1
                         HEALTH_PACK_MIN = 99
-                        DASH_REMOVE_MIN = 1
-                        DASH_REMOVE_MAX = 5
+                        DASH_REMOVE_MIN = 6
+                        DASH_REMOVE_MAX = 30
                         DASH_AMOUNT = 30
-                        DASH_GOAL = 10
+                        DASH_GOAL = 60
                         DASH_BAR_WIDTH = DASH_GOAL * DB_WIDTH_MULTIPLIER
                         health_img = pygame.transform.scale(pygame.image.load(os.path.join('pictures', 'health.png')), (80, 80))
                         HEAL_MIN = 100
@@ -1031,13 +1158,22 @@ async def main():
     bouncer_trails = []
     bouncers_vel = []
 
+    pass_heal_min = 5
+    pass_heal_max = 10
+    heal_cooldown = to_seconds(10, FPS)
+
     hit_on_bounce = 0
+
+    HEALTH_WIDTH_MULTIPLIER = 3
+    HEALTH_BAR_WIDTH = MAX_HEALTH * HEALTH_WIDTH_MULTIPLIER
 
     clock = pygame.time.Clock()
 
     bounces_survived = 0
     bounce_limit = 5
     pu_goal = 100
+
+    stars = []
 
     diff_change = True
 
@@ -1136,42 +1272,13 @@ async def main():
             diff_change = False
 
         if bounces_survived >= bounce_limit:
-            if len(bouncers) == MAX_BOUNCERS:
-                HEALTH_PACK_CHANCE += random.randint(100, 400)
-                SCORE_AMOUNT += 1
-                MAX_HEALTH += random.randint(45, 100)
-                if MAX_HEALTH > 175:
-                    MAX_HEALTH = 175
-                HEALTH_WIDTH_MULTIPLIER = 3
-                HEALTH_BAR_WIDTH = MAX_HEALTH * HEALTH_WIDTH_MULTIPLIER
-                health = MAX_HEALTH
-                BOUNCER_MIN_DMG += random.randint(5, 10)
-                BOUNCER_MAX_DMG += random.randint(11, 20)
-                bounce_limit *= bounce_multiplier
-                MINI_SQUARE_MIN_DMG += random.randint(5, 10)
-                MINI_SQUARE_MAX_DMG += random.randint(11, 20)
-                db_speed_update = random.randint(5, 20)
-                DASH_ADD -= db_speed_update
-                HEAL_MIN -= random.randint(15, 25)
-                HEAL_MAX -= random.randint(5, 14)
-                MINI_SQUARE_SPEED += random.randint(1, 3)
-                if BOUNCER_MIN_DMG > 29 and BOUNCER_MAX_DMG > 39:
-                    BOUNCER_MIN_DMG = 30
-                    BOUNCER_MAX_DMG = 40
-                if MINI_SQUARE_MIN_DMG > 29 and MINI_SQUARE_MAX_DMG > 39:
-                    MINI_SQUARE_MIN_DMG = 30
-                    MINI_SQUARE_MAX_DMG = 40
-                if DASH_ADD < 1:
-                    DASH_ADD = 1
-                if HEAL_MIN < 15:
-                    HEAL_MIN = 15
-                if HEAL_MAX < 30:
-                    HEAL_MAX = 30
-                if MINI_SQUARE_SPEED >= PLAYER_VEL - 6:
-                    MINI_SQUARE_SPEED = PLAYER_VEL - 7
-            else:
+            if not len(bouncers) == MAX_BOUNCERS:
                 randx = random.randint(0, SCREEN_WIDTH)
                 randy = random.randint(0, SCREEN_HEIGHT)
+                active = True
+                pass_heal_min += random.randint(1, 5)
+                pass_heal_max += random.randint(5, 10)
+                cd += to_seconds(random.randint(-5, 5), FPS)
                 bouncers.append(
                     pygame.Rect(randx - BOUNCER_WIDTH / 2, randy - BOUNCER_WIDTH / 2, BOUNCER_WIDTH, BOUNCER_HEIGHT))
                 bouncers_vel.append([BOUNCER_VEL_X, BOUNCER_VEL_Y])
@@ -1182,7 +1289,12 @@ async def main():
                 for i in range(40):
                     particles.append(
                         particle(randx, randy, random.randrange(-5, 5), random.randrange(-2, 0), 10, 10, BLUE, 0))
-
+            else:
+                add_amount = random.randint(15, 40)
+                health += add_amount
+                bounce_limit *= bounce_multiplier
+                float_texts.append(float_text(player.x, player.y, 10, random.randint(-4, 4), GREEN, RETRO_TEXT,
+                                              ("+" + str(add_amount))))
         index = 0
         if len(bouncers) > MAX_BOUNCERS:
             purge_amount = len(bouncers) - MAX_BOUNCERS
@@ -1199,6 +1311,13 @@ async def main():
                                                 random.randint(15, SCREEN_HEIGHT - 15), HEALTH_PACK_SIZE,
                                                 HEALTH_PACK_SIZE))
 
+        if bounces_survived >= star_goal:
+            stars.append(pygame.Rect(random.randint(PU_STAR_SIZE, SCREEN_WIDTH - PU_STAR_SIZE),
+                                                random.randint(15, SCREEN_HEIGHT - 15), PU_STAR_SIZE,
+                                                PU_STAR_SIZE))
+            star_goal *= 2
+            star_goal += random.randint(-500, 500)
+
         if SCORE_AMOUNT > 5:
             SCORE_AMOUNT = 5
 
@@ -1206,7 +1325,6 @@ async def main():
             purge_amount = len(particles) - PARTICLE_LIMIT
             for x in range(purge_amount):
                 particles.pop(len(particles) - 1)
-
 
         if MAX_HEALTH > 175:
             MAX_HEALTH = 175
@@ -1228,12 +1346,16 @@ async def main():
 
         await asyncio.sleep(0)
 
+        cd = to_seconds(10, FPS)
+
         keys_pressed = pygame.key.get_pressed()
         player_movement(player, keys_pressed)
         mini_square_movement(player, mini_square)
         bouncer_movement(player)
         health_handler(player)
         pu_speed_handler(player)
+        star_handler(player)
+        passive_healing_handler(player, random.randint(pass_heal_min, pass_heal_max), cd, active)
         dash_handler(player, keys_pressed)
         pu_live_handler(player)
         draw_window(player, mini_square)
